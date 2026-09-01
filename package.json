@@ -1,0 +1,49 @@
+{
+  "name": "ai-rag-factory",
+  "version": "0.0.1",
+  "description": "Minimal RAG Telegram bot prototype: NestJS + grammY + Vercel AI SDK + Qdrant",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "nest build",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "lint": "eslint \"src/**/*.ts\" --fix",
+    "test:qdrant": "node dist/scripts/test-qdrant.js",
+    "test:chunker": "node dist/scripts/test-chunker.js"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^4.0.60",
+    "@ai-sdk/openai": "^4.0.54",
+    "@nestjs/common": "^12.0.1",
+    "@nestjs/config": "^12.0.0",
+    "@nestjs/core": "^12.0.1",
+    "@nestjs/platform-express": "^12.0.1",
+    "@qdrant/js-client-rest": "^1.19.0",
+    "ai": "^7.0.88",
+    "grammy": "^1.46.0",
+    "mammoth": "^1.12.2",
+    "pdf-parse": "^2.4.5",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@nestjs/cli": "^12.0.0",
+    "@nestjs/schematics": "^12.0.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.4.0",
+    "eslint": "^10.9.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.6",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.69.0"
+  }
+}
