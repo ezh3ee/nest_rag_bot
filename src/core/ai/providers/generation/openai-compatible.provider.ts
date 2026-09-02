@@ -1,8 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModelV4 } from '@ai-sdk/provider';
 import { generateText } from 'ai';
-import type { OllamaConfig } from '../../../../config/app.schema';
-import type { OpenAILikeConfig } from '../../../../config/app.schema';
+import type { OllamaConfig, OpenAILikeConfig } from '../../../../config/llm.schema';
 import type { GenerationOptions } from '../../interfaces/generation-provider.interface';
 import { BaseGenerationProvider } from '../../interfaces/generation-provider.interface';
 

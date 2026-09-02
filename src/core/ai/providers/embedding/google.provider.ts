@@ -1,8 +1,8 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import type { EmbeddingModelV4 } from '@ai-sdk/provider';
-import { embedMany } from 'ai';
 import { Embeddings } from '@langchain/core/embeddings';
-import type { EmbeddingGoogleConfig } from '../../../../config/app.schema';
+import { embedMany } from 'ai';
+import type { EmbeddingGoogleConfig } from '../../../../config/llm.schema';
 
 export class GoogleEmbeddings extends Embeddings {
   private readonly model: EmbeddingModelV4;

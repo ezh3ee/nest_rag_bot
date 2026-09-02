@@ -1,9 +1,6 @@
 import { z } from 'zod';
 
-export const envSchema = z.object({
-  TELEGRAM_BOT_TOKEN: z.string().min(1),
-  ADMIN_CHAT_ID: z.coerce.number().int().positive(),
-
+export const llmSchema = z.object({
   LLM_GENERATION_PROVIDER: z
     .enum(['openai', 'groq', 'polza', 'ollama', 'google'])
     .default('openai'),
@@ -16,11 +13,6 @@ export const envSchema = z.object({
   LLM_EMBEDDING_API_KEY: z.string().default(''),
   LLM_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),
   EMBEDDING_DIM: z.coerce.number().int().positive().default(1536),
-
-  QDRANT_URL: z.string().url().default('http://localhost:6333'),
-  QDRANT_COLLECTION: z.string().min(1).default('rag_minimal'),
-
-  DATABASE_URL: z.string().default('file:./dev.db'),
 
   LLM_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
   LLM_MAX_RETRIES: z.coerce.number().int().positive().default(3),
@@ -76,7 +68,7 @@ export const EmbeddingProviderSchema = z.discriminatedUnion('provider', [
   EmbeddingGoogleSchema,
 ]);
 
-export type EnvConfig = z.infer<typeof envSchema>;
+export type EnvConfig = z.infer<typeof llmSchema>;
 export type OpenAILikeConfig = z.infer<typeof OpenAILikeSchema>;
 export type OllamaConfig = z.infer<typeof OllamaSchema>;
 export type GoogleConfig = z.infer<typeof GoogleSchema>;

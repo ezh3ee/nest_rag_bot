@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { GenerationService } from './ai/generation.service';
 import type { ToolSet } from 'ai';
+import { GenerationService } from './ai/generation.service';
 import { QdrantService } from './vector/qdrant.service';
 
 const TOP_K = 4;
@@ -8,7 +8,7 @@ const SCORE_THRESHOLD = 0.3;
 
 const SYSTEM_PROMPT = [
   'Ты — ассистент бизнеса. Отвечай строго по предоставленному контексту.',
-  'Если в контексте нет ответа — ответь ровно: «Такой информации не найдено».',
+  // 'Если в контексте нет ответа — ответь ровно: «Такой информации не найдено».',
   'Отвечай кратко и по делу, на языке вопроса.',
 ].join(' ');
 

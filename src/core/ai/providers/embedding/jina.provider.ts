@@ -1,22 +1,20 @@
-import { createOpenAI } from '@ai-sdk/openai';
-import type { EmbeddingModelV4 } from '@ai-sdk/provider';
+import type { EmbeddingModelV2 } from '@ai-sdk/provider';
 import { Embeddings } from '@langchain/core/embeddings';
 import { embedMany } from 'ai';
-import type {
-  EmbeddingOllamaConfig,
-  EmbeddingOpenAILikeConfig,
-} from '../../../../config/llm.schema';
+import { createJina } from 'jina-ai-provider';
+import type { EmbeddingOpenAILikeConfig } from '../../../../config/llm.schema';
 
-type OpenAICompatibleEmbeddingConfig = EmbeddingOpenAILikeConfig | EmbeddingOllamaConfig;
+type OpenAICompatibleEmbeddingConfig = EmbeddingOpenAILikeConfig;
 
-export class OpenAICompatibleEmbeddings extends Embeddings {
-  private readonly model: EmbeddingModelV4;
+export class JinaEmbeddings extends Embeddings {
+  private readonly model: EmbeddingModelV2<string>;
 
   constructor(cfg: OpenAICompatibleEmbeddingConfig, maxRetries: number) {
     super({ maxRetries });
-    const client = createOpenAI({
+
+    const client = createJina({
       baseURL: cfg.baseUrl,
-      apiKey: 'apiKey' in cfg && cfg.apiKey.length > 0 ? cfg.apiKey : 'not-provided',
+      apiKey: cfg.apiKey,
     });
 
     this.model = client.textEmbeddingModel(cfg.model);

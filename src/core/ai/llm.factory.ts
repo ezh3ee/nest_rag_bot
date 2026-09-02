@@ -1,9 +1,10 @@
+import { Embeddings } from '@langchain/core/embeddings';
 import { Inject, Injectable } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
-import { Embeddings } from '@langchain/core/embeddings';
-import appConfig from '../../config/app.config';
+import llmConfig from '../../config/llm.config';
 import { BaseGenerationProvider } from './interfaces/generation-provider.interface';
 import { GoogleEmbeddings } from './providers/embedding/google.provider';
+import { JinaEmbeddings } from './providers/embedding/jina.provider';
 import { OpenAICompatibleEmbeddings } from './providers/embedding/openai-compatible.provider';
 import { GoogleGenerationProvider } from './providers/generation/google.provider';
 import { OpenAICompatibleGenerationProvider } from './providers/generation/openai-compatible.provider';
@@ -11,8 +12,8 @@ import { OpenAICompatibleGenerationProvider } from './providers/generation/opena
 @Injectable()
 export class LLMFactory {
   constructor(
-    @Inject(appConfig.KEY)
-    private readonly config: ConfigType<typeof appConfig>,
+    @Inject(llmConfig.KEY)
+    private readonly config: ConfigType<typeof llmConfig>,
   ) {}
 
   createGeneration(): BaseGenerationProvider {
@@ -37,8 +38,9 @@ export class LLMFactory {
     switch (cfg.provider) {
       case 'google':
         return new GoogleEmbeddings(cfg, maxRetries);
-      case 'openai':
       case 'jina':
+        return new JinaEmbeddings(cfg, maxRetries);
+      case 'openai':
       case 'ollama':
         return new OpenAICompatibleEmbeddings(cfg, maxRetries);
     }

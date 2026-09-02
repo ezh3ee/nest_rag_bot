@@ -1,9 +1,10 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { ConfigType } from '@nestjs/config';
 import { Document } from '@langchain/core/documents';
 import { QdrantVectorStore } from '@langchain/qdrant';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import appConfig from '../../config/app.config';
+import llmConfig from '../../config/llm.config';
 import { LLMFactory } from '../ai/llm.factory';
 import type { Chunk } from '../ingest/chunker.service';
 
@@ -22,15 +23,17 @@ export class QdrantService {
   constructor(
     @Inject(appConfig.KEY)
     private readonly config: ConfigType<typeof appConfig>,
+    @Inject(llmConfig.KEY)
+    private readonly llmConf: ConfigType<typeof llmConfig>,
     factory: LLMFactory,
   ) {
     this.client = new QdrantClient({ url: config.QDRANT_URL });
     this.store = new QdrantVectorStore(factory.createEmbedding(), {
-      url: config.QDRANT_URL,
-      collectionName: config.QDRANT_COLLECTION,
+      url: this.config.QDRANT_URL,
+      collectionName: this.config.QDRANT_COLLECTION,
       collectionConfig: {
         vectors: {
-          size: config.EMBEDDING_DIM,
+          size: this.llmConf.EMBEDDING_DIM,
           distance: 'Cosine',
         },
       },

@@ -1,61 +1,33 @@
 import { registerAs } from '@nestjs/config';
-import { ZodError } from 'zod';
-import { EmbeddingProviderSchema, envSchema, GenerationProviderSchema } from './app.schema';
-import type { EmbeddingProviderConfig, EnvConfig, GenerationProviderConfig } from './app.schema';
+import { z, ZodError } from 'zod';
 import { formatZodIssues } from './validation/format-zod-error';
 
-function toGenerationProviderConfig(env: EnvConfig): GenerationProviderConfig {
-  const result = GenerationProviderSchema.safeParse({
-    provider: env.LLM_GENERATION_PROVIDER,
-    baseUrl: env.LLM_GENERATION_BASE_URL,
-    apiKey: env.LLM_GENERATION_API_KEY,
-    model: env.LLM_GENERATION_MODEL,
-  });
-  if (!result.success) {
-    throw new Error(
-      `[APP Config]: Invalid generation provider config - ${formatZodIssues(result.error)}`,
-    );
-  }
-  return result.data;
-}
+const appConfigSchema = z.object({
+  TELEGRAM_BOT_TOKEN: z.string().min(1),
+  ADMIN_CHAT_ID: z.coerce.number().int().positive(),
 
-function toEmbeddingProviderConfig(env: EnvConfig): EmbeddingProviderConfig {
-  const result = EmbeddingProviderSchema.safeParse({
-    provider: env.LLM_EMBEDDING_PROVIDER,
-    baseUrl: env.LLM_EMBEDDING_BASE_URL,
-    apiKey: env.LLM_EMBEDDING_API_KEY,
-    model: env.LLM_EMBEDDING_MODEL,
-  });
-  if (!result.success) {
-    throw new Error(
-      `[APP Config]: Invalid embedding provider config - ${formatZodIssues(result.error)}`,
-    );
-  }
-  return result.data;
-}
+  QDRANT_URL: z.string().url().default('http://localhost:6333'),
+  QDRANT_COLLECTION: z.string().min(1).default('rag_minimal'),
 
-export type AppConfig = EnvConfig & {
-  generation: GenerationProviderConfig;
-  embedding: EmbeddingProviderConfig;
-};
+  DATABASE_URL: z.string().default('file:./dev.db'),
+});
+
+export type AppConfig = z.infer<typeof appConfigSchema>;
 
 export default registerAs('app', (): AppConfig => {
-  let env: EnvConfig;
+  let data: AppConfig;
 
   try {
-    env = envSchema.parse(process.env);
+    data = appConfigSchema.parse(process.env);
   } catch (error) {
     if (error instanceof ZodError) {
       throw new Error(`[APP Config]: Validation failed - ${formatZodIssues(error)}`, {
         cause: error,
       });
     }
+
     throw error;
   }
 
-  return {
-    ...env,
-    generation: toGenerationProviderConfig(env),
-    embedding: toEmbeddingProviderConfig(env),
-  };
+  return data;
 });

@@ -1,7 +1,7 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import type { LanguageModelV4 } from '@ai-sdk/provider';
 import { generateText } from 'ai';
-import type { GoogleConfig } from '../../../../config/app.schema';
+import type { GoogleConfig } from '../../../../config/llm.schema';
 import type { GenerationOptions } from '../../interfaces/generation-provider.interface';
 import { BaseGenerationProvider } from '../../interfaces/generation-provider.interface';
 
