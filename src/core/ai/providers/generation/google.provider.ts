@@ -1,7 +1,7 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import type { LanguageModelV4 } from '@ai-sdk/provider';
 import { generateText } from 'ai';
-import type { AppConfig } from '../../../../config/app.config';
+import type { GoogleConfig } from '../../../../config/app.schema';
 import type { GenerationOptions } from '../../interfaces/generation-provider.interface';
 import { BaseGenerationProvider } from '../../interfaces/generation-provider.interface';
 
@@ -10,11 +10,11 @@ export class GoogleGenerationProvider extends BaseGenerationProvider {
 
   protected readonly maxRetries: number;
 
-  constructor(config: AppConfig, apiKey: string, modelName: string) {
+  constructor(cfg: GoogleConfig, maxRetries: number) {
     super();
-    this.maxRetries = config.LLM_MAX_RETRIES;
-    const client = createGoogleGenerativeAI({ apiKey });
-    this.model = client(modelName);
+    this.maxRetries = maxRetries;
+    const client = createGoogleGenerativeAI({ apiKey: cfg.apiKey });
+    this.model = client(cfg.model);
   }
 
   async generate(system: string, message: string, options?: GenerationOptions): Promise<string> {

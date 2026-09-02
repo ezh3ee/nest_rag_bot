@@ -1,26 +1,31 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import type { EmbeddingModelV4 } from '@ai-sdk/provider';
 import { embedMany } from 'ai';
-import type { AppConfig } from '../../../../config/app.config';
-import { BaseEmbeddingProvider } from '../../interfaces/embedding-provider.interface';
+import { Embeddings } from '@langchain/core/embeddings';
+import type { EmbeddingOllamaConfig } from '../../../../config/app.schema';
+import type { EmbeddingOpenAILikeConfig } from '../../../../config/app.schema';
 
-export class OpenAICompatibleEmbeddingProvider extends BaseEmbeddingProvider {
+type OpenAICompatibleEmbeddingConfig = EmbeddingOpenAILikeConfig | EmbeddingOllamaConfig;
+
+export class OpenAICompatibleEmbeddings extends Embeddings {
   private readonly model: EmbeddingModelV4;
 
-  protected readonly maxRetries: number;
-
-  constructor(config: AppConfig, baseUrl: string, apiKey: string, modelName: string) {
-    super();
-    this.maxRetries = config.LLM_MAX_RETRIES;
+  constructor(cfg: OpenAICompatibleEmbeddingConfig, maxRetries: number) {
+    super({ maxRetries });
     const client = createOpenAI({
-      baseURL: baseUrl,
-      apiKey: apiKey.length > 0 ? apiKey : 'not-provided',
+      baseURL: cfg.baseUrl,
+      apiKey: 'apiKey' in cfg && cfg.apiKey.length > 0 ? cfg.apiKey : 'not-provided',
     });
-    this.model = client.textEmbeddingModel(modelName);
+    this.model = client.textEmbeddingModel(cfg.model);
   }
 
-  async embed(texts: string[]): Promise<number[][]> {
+  async embedDocuments(texts: string[]): Promise<number[][]> {
     const { embeddings } = await embedMany({ model: this.model, values: texts });
     return embeddings.map((e) => Array.from(e));
+  }
+
+  async embedQuery(text: string): Promise<number[]> {
+    const [vector] = await this.embedDocuments([text]);
+    return vector ?? [];
   }
 }

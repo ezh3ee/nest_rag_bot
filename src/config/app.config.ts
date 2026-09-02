@@ -1,36 +1,49 @@
 import { registerAs } from '@nestjs/config';
-import { z, ZodError } from 'zod';
+import { ZodError } from 'zod';
+import { EmbeddingProviderSchema, envSchema, GenerationProviderSchema } from './app.schema';
+import type { EmbeddingProviderConfig, EnvConfig, GenerationProviderConfig } from './app.schema';
 import { formatZodIssues } from './validation/format-zod-error';
 
-const configSchema = z.object({
-  TELEGRAM_BOT_TOKEN: z.string().min(1),
-  ADMIN_CHAT_ID: z.coerce.number().int().positive(),
+function toGenerationProviderConfig(env: EnvConfig): GenerationProviderConfig {
+  const result = GenerationProviderSchema.safeParse({
+    provider: env.LLM_GENERATION_PROVIDER,
+    baseUrl: env.LLM_GENERATION_BASE_URL,
+    apiKey: env.LLM_GENERATION_API_KEY,
+    model: env.LLM_GENERATION_MODEL,
+  });
+  if (!result.success) {
+    throw new Error(
+      `[APP Config]: Invalid generation provider config - ${formatZodIssues(result.error)}`,
+    );
+  }
+  return result.data;
+}
 
-  LLM_GENERATION_PROVIDER: z
-    .enum(['openai', 'groq', 'polza', 'ollama', 'google'])
-    .default('openai'),
-  LLM_GENERATION_BASE_URL: z.string().url().default('https://api.openai.com/v1'),
-  LLM_GENERATION_API_KEY: z.string().default(''),
-  LLM_GENERATION_MODEL: z.string().default('gpt-4o-mini'),
+function toEmbeddingProviderConfig(env: EnvConfig): EmbeddingProviderConfig {
+  const result = EmbeddingProviderSchema.safeParse({
+    provider: env.LLM_EMBEDDING_PROVIDER,
+    baseUrl: env.LLM_EMBEDDING_BASE_URL,
+    apiKey: env.LLM_EMBEDDING_API_KEY,
+    model: env.LLM_EMBEDDING_MODEL,
+  });
+  if (!result.success) {
+    throw new Error(
+      `[APP Config]: Invalid embedding provider config - ${formatZodIssues(result.error)}`,
+    );
+  }
+  return result.data;
+}
 
-  LLM_EMBEDDING_PROVIDER: z.enum(['openai', 'jina', 'ollama', 'google']).default('openai'),
-  LLM_EMBEDDING_BASE_URL: z.string().url().default('https://api.openai.com/v1'),
-  LLM_EMBEDDING_API_KEY: z.string().default(''),
-  LLM_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),
-  EMBEDDING_DIM: z.coerce.number().int().positive().default(1536),
-
-  QDRANT_URL: z.string().url().default('http://localhost:6333'),
-  QDRANT_COLLECTION: z.string().min(1).default('rag_minimal'),
-
-  LLM_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
-  LLM_MAX_RETRIES: z.coerce.number().int().positive().default(3),
-});
-
-export type AppConfig = z.infer<typeof configSchema>;
+export type AppConfig = EnvConfig & {
+  generation: GenerationProviderConfig;
+  embedding: EmbeddingProviderConfig;
+};
 
 export default registerAs('app', (): AppConfig => {
+  let env: EnvConfig;
+
   try {
-    return configSchema.parse(process.env);
+    env = envSchema.parse(process.env);
   } catch (error) {
     if (error instanceof ZodError) {
       throw new Error(`[APP Config]: Validation failed - ${formatZodIssues(error)}`, {
@@ -39,4 +52,10 @@ export default registerAs('app', (): AppConfig => {
     }
     throw error;
   }
+
+  return {
+    ...env,
+    generation: toGenerationProviderConfig(env),
+    embedding: toEmbeddingProviderConfig(env),
+  };
 });

@@ -1,23 +1,25 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import type { EmbeddingModelV4 } from '@ai-sdk/provider';
 import { embedMany } from 'ai';
-import type { AppConfig } from '../../../../config/app.config';
-import { BaseEmbeddingProvider } from '../../interfaces/embedding-provider.interface';
+import { Embeddings } from '@langchain/core/embeddings';
+import type { EmbeddingGoogleConfig } from '../../../../config/app.schema';
 
-export class GoogleEmbeddingProvider extends BaseEmbeddingProvider {
+export class GoogleEmbeddings extends Embeddings {
   private readonly model: EmbeddingModelV4;
 
-  protected readonly maxRetries: number;
-
-  constructor(config: AppConfig, apiKey: string, modelName: string) {
-    super();
-    this.maxRetries = config.LLM_MAX_RETRIES;
-    const client = createGoogleGenerativeAI({ apiKey });
-    this.model = client.embedding(modelName);
+  constructor(cfg: EmbeddingGoogleConfig, maxRetries: number) {
+    super({ maxRetries });
+    const client = createGoogleGenerativeAI({ apiKey: cfg.apiKey });
+    this.model = client.embedding(cfg.model);
   }
 
-  async embed(texts: string[]): Promise<number[][]> {
+  async embedDocuments(texts: string[]): Promise<number[][]> {
     const { embeddings } = await embedMany({ model: this.model, values: texts });
     return embeddings.map((e) => Array.from(e));
+  }
+
+  async embedQuery(text: string): Promise<number[]> {
+    const [vector] = await this.embedDocuments([text]);
+    return vector ?? [];
   }
 }

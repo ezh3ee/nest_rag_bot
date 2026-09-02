@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TelegramModule } from './channels/telegram/telegram.module';
 import { CoreModule } from './core/core.module';
+import { PrismaDatabaseModule } from './database/prisma-database.module';
 import appConfig from './config/app.config';
 
 @Module({
@@ -11,6 +12,7 @@ import appConfig from './config/app.config';
       cache: true,
       load: [appConfig],
     }),
+    PrismaDatabaseModule,
     CoreModule,
     TelegramModule,
   ],
