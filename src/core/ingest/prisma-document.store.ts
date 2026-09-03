@@ -1,8 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import type { DocumentStore } from './document-store.interface';
-import type { DocumentStatus } from './document-store.interface';
-import type { StoredDocument } from './document-store.interface';
+import type { DocumentStatus, DocumentStore, StoredDocument } from './document-store.interface';
 
 @Injectable()
 export class PrismaDocumentStore implements DocumentStore {

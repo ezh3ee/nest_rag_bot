@@ -1,10 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { DOCUMENT_STORE } from './document-store.interface';
-import type { DocumentStore } from './document-store.interface';
-import type { StoredDocument } from './document-store.interface';
-import { ChunkerService } from './chunker.service';
 import { QdrantService } from '../vector/qdrant.service';
+import { ChunkerService } from './chunker.service';
+import type { DocumentStore, StoredDocument } from './document-store.interface';
+import { DOCUMENT_STORE } from './document-store.interface';
+import { DocumentNotFoundError } from './errors';
 import { DocxParser } from './parsers/docx.parser';
 import { PdfParser } from './parsers/pdf.parser';
 import { TextParser } from './parsers/text.parser';
@@ -76,6 +76,10 @@ export class IngestService {
   }
 
   async deleteDocument(documentId: string): Promise<void> {
+    const document = await this.store.get(documentId);
+    if (!document) {
+      throw new DocumentNotFoundError(documentId);
+    }
     await this.qdrant.deleteByDocument(documentId);
     await this.store.delete(documentId);
     this.logger.log(`Deleted document ${documentId}`);
