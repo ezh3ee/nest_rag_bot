@@ -11,26 +11,37 @@ export const CB_DOCS_VIEW = 'docs:v';
 export const CB_DOCS_DELETE = 'docs:d';
 export const CB_DOCS_CONFIRM = 'docs:c';
 
+export const Action = {
+  PAGE: 'p',
+  VIEW: 'v',
+  DELETE: 'd',
+  CONFIRM: 'c',
+} as const;
+
+export type ActionType = (typeof Action)[keyof typeof Action];
+
 export interface DocsCallback {
-  action: 'page' | 'view' | 'delete' | 'confirm';
+  action: ActionType;
   documentId: string;
   offset: number;
 }
 
 export function parseDocsCallback(data: string): DocsCallback | null {
+  console.log(data);
   const parts = data.split(':');
   if (parts.length < 2 || parts[0] !== 'docs') {
     return null;
   }
   const action = parts[1];
-  if (action === 'page') {
+  console.log('action ', action);
+  if (action === Action.PAGE) {
     const offset = Number(parts[2]);
     if (!Number.isInteger(offset) || offset < 0) {
       return null;
     }
-    return { action: 'page', documentId: '', offset };
+    return { action: Action.PAGE, documentId: '', offset };
   }
-  if (action === 'view' || action === 'delete' || action === 'confirm') {
+  if (action === Action.VIEW || action === Action.DELETE || action === Action.CONFIRM) {
     const documentId = parts[2] ?? '';
     const offset = Number(parts[3] ?? 0);
     if (!documentId || !Number.isInteger(offset) || offset < 0) {

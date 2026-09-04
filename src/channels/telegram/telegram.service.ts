@@ -6,11 +6,13 @@ import {
   OnApplicationShutdown,
 } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
-import { Bot, type Context } from 'grammy';
+import { Bot, GrammyError, type Context } from 'grammy';
 import appConfig from '../../config/app.config';
 import { ChatService } from '../../core/chat.service';
 import { IngestService } from '../../core/ingest/ingest.service';
+import { syncCommandMenus, syncGroupCommands } from './telegram-commands';
 import {
+  Action,
   buildConfirmDeleteKeyboard,
   buildDocDetailKeyboard,
   buildDocsListKeyboard,
@@ -21,7 +23,9 @@ import {
   PAGE_SIZE,
   parseDocsCallback,
 } from './telegram-docs.ui';
-import { syncCommandMenus, syncGroupCommands } from './telegram-commands';
+
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
+const MAX_FILE_MB = 20;
 
 @Injectable()
 export class TelegramService implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -43,8 +47,16 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Bot error: ${message}`);
     });
-    await syncCommandMenus(this.bot, this.config.ADMIN_CHAT_ID);
-    this.logger.log('Command menus synced');
+
+    try {
+      await syncCommandMenus(this.bot, this.config.ADMIN_CHAT_ID);
+      this.logger.log('Command menus synced');
+    } catch (error) {
+      this.logger.error(
+        `Command menus sync failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
     await this.bot.start({
       onStart: (me) => this.logger.log(`Bot started as @${me.username}`),
     });
@@ -91,24 +103,28 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
 
       try {
         switch (parsed.action) {
-          case 'page':
+          case Action.PAGE:
             await ctx.answerCallbackQuery();
             await this.renderDocsPage(ctx, parsed.offset, true);
             return;
-          case 'view':
+          case Action.VIEW:
             await ctx.answerCallbackQuery();
             await this.showDocument(ctx, parsed.documentId, parsed.offset);
             return;
-          case 'delete':
+          case Action.DELETE:
             await ctx.answerCallbackQuery();
             await this.showDeleteConfirmation(ctx, parsed.documentId, parsed.offset);
             return;
-          case 'confirm':
+          case Action.CONFIRM:
             await ctx.answerCallbackQuery();
             await this.deleteDocument(ctx, parsed.documentId, parsed.offset);
             return;
         }
       } catch (error) {
+        if (error instanceof GrammyError && error.description.includes('message is not modified')) {
+          await ctx.answerCallbackQuery();
+          return;
+        }
         this.logger.error(
           `Callback error: ${error instanceof Error ? error.message : String(error)}`,
         );
@@ -122,8 +138,8 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
         return;
       }
       const doc = ctx.message.document;
-      if (doc.file_size === undefined || doc.file_size > 20 * 1024 * 1024) {
-        await ctx.reply(`Файл слишком большой (максимум 20 МБ).`);
+      if (doc.file_size === undefined || doc.file_size > MAX_FILE_BYTES) {
+        await ctx.reply(`Файл слишком большой (максимум ${MAX_FILE_MB} МБ).`);
         return;
       }
       const fileName = doc.file_name ?? `document-${doc.file_id}`;
@@ -183,9 +199,11 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
   }
 
   private async renderDocsPage(ctx: Context, page: number, edit: boolean): Promise<void> {
+    console.log('page', page);
     const docs = await this.ingest.getDocumentsPage(page + 1, PAGE_SIZE);
     const text = docsListText(docs);
-    const keyboard = buildDocsListKeyboard(docs, (p) => (p - 1) * PAGE_SIZE);
+    // const keyboard = buildDocsListKeyboard(docs, (p) => (p - 1) * PAGE_SIZE);
+    const keyboard = buildDocsListKeyboard(docs, (p) => p - 1);
 
     if (edit) {
       await ctx.editMessageText(text, { reply_markup: keyboard });
