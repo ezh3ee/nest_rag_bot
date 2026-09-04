@@ -15,6 +15,7 @@ export interface DocumentStore {
   get(id: string): Promise<StoredDocument | null>;
   list(): Promise<StoredDocument[]>;
   update(id: string, patch: Partial<Omit<StoredDocument, 'id'>>): Promise<void>;
+  delete(id: string): Promise<void>;
 }
 
 export const DOCUMENT_STORE = Symbol('DOCUMENT_STORE');

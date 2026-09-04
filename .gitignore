@@ -72,3 +72,7 @@ opencode.json
 # AI
 .agents
 .hermes
+
+src/generated/prisma/
+*.db
+data/

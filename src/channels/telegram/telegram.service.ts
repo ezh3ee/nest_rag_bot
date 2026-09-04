@@ -9,6 +9,7 @@ import type { ConfigType } from '@nestjs/config';
 import { Bot, type Context } from 'grammy';
 import appConfig from '../../config/app.config';
 import { ChatService } from '../../core/chat.service';
+import { DocumentNotFoundError } from '../../core/ingest/errors';
 import { IngestService } from '../../core/ingest/ingest.service';
 
 const MAX_TG_MESSAGE = 4000;
@@ -61,9 +62,39 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
       const lines = docs.map((d) => {
         const icon = d.status === 'done' ? '✅' : d.status === 'error' ? '❌' : '⏳';
         const err = d.errorMessage ? ` — ${d.errorMessage}` : '';
-        return `${icon} ${d.fileName} (${d.chunkCount} чанков)${err}`;
+        return `${icon} ${d.fileName} (${d.chunkCount} чанков)${err} , id - ${d.id}`;
       });
       await ctx.reply(['Документы в базе:', ...lines].join('\n'));
+    });
+
+    this.bot.command('delete', async (ctx) => {
+      if (!this.isAdmin(ctx)) {
+        await ctx.reply('⛔ Удаление документов доступно только администратору.');
+        return;
+      }
+
+      const args = ctx.message?.text.split(' ').slice(1);
+      if (!args || args.length !== 1) {
+        await ctx.reply(
+          '⛔ Неправильный формат команды. Используй /delete <id> , чтобы удалить документ',
+        );
+        return;
+      }
+
+      const id = args[0];
+
+      try {
+        await this.ingest.deleteDocument(id);
+        await ctx.reply(`✅ Документ удалён, id - ${id}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (error instanceof DocumentNotFoundError) {
+          await ctx.reply(`❌ Документ с таким ID  не найден, id - ${id}`);
+          return;
+        }
+
+        await ctx.reply(`❌ Ошибка удаления документа: ${message}`);
+      }
     });
 
     this.bot.on('message:document', async (ctx) => {
@@ -97,7 +128,7 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
     this.bot.on('message:text', async (ctx) => {
       const text = ctx.message.text;
       if (text.startsWith('/')) {
-        await ctx.reply('Неизвестная команда. Доступно: /learn, /docs');
+        await ctx.reply('Неизвестная команда. Доступно: /learn, /docs, /delete');
         return;
       }
       try {

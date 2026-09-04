@@ -1,23 +1,25 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModelV4 } from '@ai-sdk/provider';
 import { generateText } from 'ai';
-import type { AppConfig } from '../../../../config/app.config';
+import type { OllamaConfig, OpenAILikeConfig } from '../../../../config/llm.schema';
 import type { GenerationOptions } from '../../interfaces/generation-provider.interface';
 import { BaseGenerationProvider } from '../../interfaces/generation-provider.interface';
+
+type OpenAICompatibleConfig = OpenAILikeConfig | OllamaConfig;
 
 export class OpenAICompatibleGenerationProvider extends BaseGenerationProvider {
   private readonly model: LanguageModelV4;
 
   protected readonly maxRetries: number;
 
-  constructor(config: AppConfig, baseUrl: string, apiKey: string, modelName: string) {
+  constructor(cfg: OpenAICompatibleConfig, maxRetries: number) {
     super();
-    this.maxRetries = config.LLM_MAX_RETRIES;
+    this.maxRetries = maxRetries;
     const client = createOpenAI({
-      baseURL: baseUrl,
-      apiKey: apiKey.length > 0 ? apiKey : 'not-provided',
+      baseURL: cfg.baseUrl,
+      apiKey: 'apiKey' in cfg && cfg.apiKey.length > 0 ? cfg.apiKey : 'not-provided',
     });
-    this.model = client(modelName);
+    this.model = client(cfg.model);
   }
 
   async generate(system: string, message: string, options?: GenerationOptions): Promise<string> {

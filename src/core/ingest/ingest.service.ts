@@ -1,11 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { EmbeddingService } from '../ai/embedding.service';
 import { QdrantService } from '../vector/qdrant.service';
 import { ChunkerService } from './chunker.service';
+import type { DocumentStore, StoredDocument } from './document-store.interface';
 import { DOCUMENT_STORE } from './document-store.interface';
-import type { DocumentStore } from './document-store.interface';
-import type { StoredDocument } from './document-store.interface';
+import { DocumentNotFoundError } from './errors';
 import { DocxParser } from './parsers/docx.parser';
 import { PdfParser } from './parsers/pdf.parser';
 import { TextParser } from './parsers/text.parser';
@@ -29,7 +28,6 @@ export class IngestService {
 
   constructor(
     private readonly chunker: ChunkerService,
-    private readonly embedding: EmbeddingService,
     private readonly qdrant: QdrantService,
     @Inject(DOCUMENT_STORE)
     private readonly store: DocumentStore,
@@ -58,25 +56,12 @@ export class IngestService {
 
     try {
       const text = await this.parse(fileType, buffer);
-      const chunks = this.chunker.chunk(text);
+      const chunks = await this.chunker.chunk(text);
       if (chunks.length === 0) {
         throw new Error('Document contains no extractable text');
       }
 
-      const vectors = await this.embedding.embed(chunks.map((c) => c.text));
-      await this.qdrant.upsert(
-        chunks.map((chunk, i) => ({
-          id: randomUUID(),
-          vector: vectors[i] ?? [],
-          payload: {
-            documentId,
-            chunkIndex: chunk.index,
-            text: chunk.text,
-            fileName,
-          },
-        })),
-      );
-
+      await this.qdrant.addChunks(documentId, fileName, chunks);
       await this.store.update(documentId, { status: 'done', chunkCount: chunks.length });
       this.logger.log(`Ingested "${fileName}" (${chunks.length} chunks)`);
     } catch (error) {
@@ -87,17 +72,17 @@ export class IngestService {
     }
 
     const updated = await this.store.get(documentId);
-    if (!updated) {
-      throw new Error('Document disappeared during ingest');
-    }
-    return { document: updated };
+    return { document: updated! };
   }
 
   async deleteDocument(documentId: string): Promise<void> {
-    const points = await this.qdrant.scrollAll();
-    const toDelete = points.filter((p) => p.payload['documentId'] === documentId);
-    await this.qdrant.deletePoints(toDelete.map((p) => p.id));
-    this.logger.log(`Deleted document ${documentId} (${toDelete.length} chunks)`);
+    const document = await this.store.get(documentId);
+    if (!document) {
+      throw new DocumentNotFoundError(documentId);
+    }
+    await this.qdrant.deleteByDocument(documentId);
+    await this.store.delete(documentId);
+    this.logger.log(`Deleted document ${documentId}`);
   }
 
   async listDocuments(): Promise<StoredDocument[]> {

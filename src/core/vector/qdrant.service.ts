@@ -1,101 +1,72 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Document } from '@langchain/core/documents';
+import { QdrantVectorStore } from '@langchain/qdrant';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import appConfig from '../../config/app.config';
-
-export interface VectorPoint {
-  id: string;
-  vector: number[];
-  payload: Record<string, unknown>;
-}
+import llmConfig from '../../config/llm.config';
+import { LLMFactory } from '../ai/llm.factory';
+import type { Chunk } from '../ingest/chunker.service';
 
 export interface SearchHit {
-  id: string;
+  text: string;
   score: number;
-  payload: Record<string, unknown> | null;
+  fileName: string;
 }
 
 @Injectable()
 export class QdrantService {
+  private readonly logger = new Logger(QdrantService.name);
   private readonly client: QdrantClient;
+  private readonly store: QdrantVectorStore;
 
   constructor(
     @Inject(appConfig.KEY)
     private readonly config: ConfigType<typeof appConfig>,
+    @Inject(llmConfig.KEY)
+    private readonly llmConf: ConfigType<typeof llmConfig>,
+    factory: LLMFactory,
   ) {
     this.client = new QdrantClient({ url: config.QDRANT_URL });
-  }
-
-  async ensureCollection(): Promise<void> {
-    const collectionName = this.config.QDRANT_COLLECTION;
-    const exists = await this.client.collectionExists(collectionName);
-    if (!exists.exists) {
-      await this.client.createCollection(collectionName, {
+    this.store = new QdrantVectorStore(factory.createEmbedding(), {
+      url: this.config.QDRANT_URL,
+      collectionName: this.config.QDRANT_COLLECTION,
+      collectionConfig: {
         vectors: {
-          size: this.config.EMBEDDING_DIM,
+          size: this.llmConf.EMBEDDING_DIM,
           distance: 'Cosine',
         },
-      });
-    }
-  }
-
-  async upsert(points: VectorPoint[]): Promise<void> {
-    if (points.length === 0) {
-      return;
-    }
-    await this.client.upsert(this.config.QDRANT_COLLECTION, {
-      points: points.map((p) => ({
-        id: p.id,
-        vector: p.vector,
-        payload: p.payload,
-      })),
+      },
     });
   }
 
-  async search(vector: number[], limit: number): Promise<SearchHit[]> {
-    const result = await this.client.query(this.config.QDRANT_COLLECTION, {
-      query: { nearest: vector },
-      limit,
-      with_payload: true,
-    });
-    return result.points.map((point) => ({
-      id: String(point.id),
-      score: point.score ?? 0,
-      payload: point.payload ?? null,
+  async addChunks(documentId: string, fileName: string, chunks: Chunk[]): Promise<void> {
+    const docs = chunks.map(
+      (chunk) =>
+        new Document({
+          pageContent: chunk.text,
+          metadata: { documentId, chunkIndex: chunk.index, fileName },
+        }),
+    );
+    await this.store.addDocuments(docs);
+    this.logger.log(`Added ${chunks.length} chunks for document ${documentId}`);
+  }
+
+  async search(query: string, limit: number): Promise<SearchHit[]> {
+    const results = await this.store.similaritySearchWithScore(query, limit);
+    return results.map(([doc, score]) => ({
+      text: doc.pageContent,
+      score,
+      fileName: String(doc.metadata['fileName'] ?? ''),
     }));
   }
 
-  async deletePoints(ids: string[]): Promise<void> {
-    if (ids.length === 0) {
-      return;
-    }
+  async deleteByDocument(documentId: string): Promise<void> {
     await this.client.delete(this.config.QDRANT_COLLECTION, {
-      points: ids,
+      filter: {
+        must: [{ key: 'metadata.documentId', match: { value: documentId } }],
+      },
     });
-  }
-
-  async scrollAll(): Promise<VectorPoint[]> {
-    const collectionName = this.config.QDRANT_COLLECTION;
-    const points: VectorPoint[] = [];
-    let offset: string | number | Record<string, unknown> | null | undefined;
-    for (;;) {
-      const page = await this.client.scroll(collectionName, {
-        limit: 256,
-        offset,
-        with_payload: true,
-      });
-      for (const point of page.points) {
-        points.push({
-          id: String(point.id),
-          vector: [],
-          payload: point.payload ?? {},
-        });
-      }
-      if (page.next_page_offset === undefined || page.next_page_offset === null) {
-        break;
-      }
-      offset = page.next_page_offset;
-    }
-    return points;
+    this.logger.log(`Deleted points for document ${documentId}`);
   }
 }
