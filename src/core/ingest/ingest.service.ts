@@ -13,6 +13,13 @@ export interface IngestResult {
   document: StoredDocument;
 }
 
+export interface DocumentsPage {
+  items: StoredDocument[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
 const PARSER_EXTENSIONS: Record<string, 'pdf' | 'docx' | 'text'> = {
   '.pdf': 'pdf',
   '.docx': 'docx',
@@ -85,8 +92,18 @@ export class IngestService {
     this.logger.log(`Deleted document ${documentId}`);
   }
 
-  async listDocuments(): Promise<StoredDocument[]> {
-    return this.store.list();
+  async getDocumentsPage(page: number, pageSize: number): Promise<DocumentsPage> {
+    const total = await this.store.count();
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const safePage = Math.min(Math.max(1, page), totalPages);
+    const skip = (safePage - 1) * pageSize;
+
+    const items = await this.store.listPage(skip, pageSize);
+    return { items, total, page: safePage, totalPages };
+  }
+
+  async getDocument(documentId: string): Promise<StoredDocument | null> {
+    return this.store.get(documentId);
   }
 
   private async parse(fileType: 'pdf' | 'docx' | 'text', buffer: Buffer): Promise<string> {

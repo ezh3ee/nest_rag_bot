@@ -28,11 +28,17 @@ export class PrismaDocumentStore implements DocumentStore {
     return doc ? this.toStored(doc) : null;
   }
 
-  async list(): Promise<StoredDocument[]> {
+  async listPage(skip: number, take: number): Promise<StoredDocument[]> {
     const docs = await this.prisma.document.findMany({
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take,
     });
     return docs.map((doc) => this.toStored(doc));
+  }
+
+  async count(): Promise<number> {
+    return this.prisma.document.count();
   }
 
   async update(id: string, patch: Partial<Omit<StoredDocument, 'id'>>): Promise<void> {

@@ -13,7 +13,8 @@ export interface StoredDocument {
 export interface DocumentStore {
   save(document: StoredDocument): Promise<void>;
   get(id: string): Promise<StoredDocument | null>;
-  list(): Promise<StoredDocument[]>;
+  listPage(skip: number, take: number): Promise<StoredDocument[]>;
+  count(): Promise<number>;
   update(id: string, patch: Partial<Omit<StoredDocument, 'id'>>): Promise<void>;
   delete(id: string): Promise<void>;
 }

@@ -9,11 +9,19 @@ import type { ConfigType } from '@nestjs/config';
 import { Bot, type Context } from 'grammy';
 import appConfig from '../../config/app.config';
 import { ChatService } from '../../core/chat.service';
-import { DocumentNotFoundError } from '../../core/ingest/errors';
 import { IngestService } from '../../core/ingest/ingest.service';
-
-const MAX_TG_MESSAGE = 4000;
-const MAX_FILE_BYTES = 20 * 1024 * 1024;
+import {
+  buildConfirmDeleteKeyboard,
+  buildDocDetailKeyboard,
+  buildDocsListKeyboard,
+  deletedText,
+  docDetailText,
+  docsListText,
+  MAX_TG_MESSAGE,
+  PAGE_SIZE,
+  parseDocsCallback,
+} from './telegram-docs.ui';
+import { syncCommandMenus, syncGroupCommands } from './telegram-commands';
 
 @Injectable()
 export class TelegramService implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -35,6 +43,8 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Bot error: ${message}`);
     });
+    await syncCommandMenus(this.bot, this.config.ADMIN_CHAT_ID);
+    this.logger.log('Command menus synced');
     await this.bot.start({
       onStart: (me) => this.logger.log(`Bot started as @${me.username}`),
     });
@@ -46,54 +56,63 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
   }
 
   private registerHandlers(): void {
+    this.bot.command('start', async (ctx) => {
+      await ctx.reply(
+        'Привет! Я бот, отвечаю на вопросы по базе знаний.\n' +
+          'Просто задай вопрос — и я найду ответ в загруженных документах.',
+      );
+    });
+
     this.bot.command('learn', async (ctx) => {
       const usage =
         'Отправь мне документ (pdf, docx, txt, md) — я обучусь по нему. ' +
-        'Или просто задай вопрос, и я отвечу по загруженным документам.';
+        'Управление документами: /docs';
       await ctx.reply(usage);
     });
 
     this.bot.command('docs', async (ctx) => {
-      const docs = await this.ingest.listDocuments();
-      if (docs.length === 0) {
-        await ctx.reply('Документов пока нет. Отправь файл для обучения.');
+      if (!this.isAdmin(ctx)) {
+        await ctx.reply('⛔ Доступно только администратору.');
         return;
       }
-      const lines = docs.map((d) => {
-        const icon = d.status === 'done' ? '✅' : d.status === 'error' ? '❌' : '⏳';
-        const err = d.errorMessage ? ` — ${d.errorMessage}` : '';
-        return `${icon} ${d.fileName} (${d.chunkCount} чанков)${err} , id - ${d.id}`;
-      });
-      await ctx.reply(['Документы в базе:', ...lines].join('\n'));
+      await this.renderDocsPage(ctx, 0, false);
     });
 
-    this.bot.command('delete', async (ctx) => {
+    this.bot.on('callback_query:data', async (ctx) => {
+      const parsed = parseDocsCallback(ctx.callbackQuery.data);
+      if (!parsed) {
+        await ctx.answerCallbackQuery();
+        return;
+      }
       if (!this.isAdmin(ctx)) {
-        await ctx.reply('⛔ Удаление документов доступно только администратору.');
+        await ctx.answerCallbackQuery('⛔ Только для администратора');
         return;
       }
-
-      const args = ctx.message?.text.split(' ').slice(1);
-      if (!args || args.length !== 1) {
-        await ctx.reply(
-          '⛔ Неправильный формат команды. Используй /delete <id> , чтобы удалить документ',
-        );
-        return;
-      }
-
-      const id = args[0];
 
       try {
-        await this.ingest.deleteDocument(id);
-        await ctx.reply(`✅ Документ удалён, id - ${id}`);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (error instanceof DocumentNotFoundError) {
-          await ctx.reply(`❌ Документ с таким ID  не найден, id - ${id}`);
-          return;
+        switch (parsed.action) {
+          case 'page':
+            await ctx.answerCallbackQuery();
+            await this.renderDocsPage(ctx, parsed.offset, true);
+            return;
+          case 'view':
+            await ctx.answerCallbackQuery();
+            await this.showDocument(ctx, parsed.documentId, parsed.offset);
+            return;
+          case 'delete':
+            await ctx.answerCallbackQuery();
+            await this.showDeleteConfirmation(ctx, parsed.documentId, parsed.offset);
+            return;
+          case 'confirm':
+            await ctx.answerCallbackQuery();
+            await this.deleteDocument(ctx, parsed.documentId, parsed.offset);
+            return;
         }
-
-        await ctx.reply(`❌ Ошибка удаления документа: ${message}`);
+      } catch (error) {
+        this.logger.error(
+          `Callback error: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        await ctx.answerCallbackQuery('Произошла ошибка');
       }
     });
 
@@ -103,8 +122,8 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
         return;
       }
       const doc = ctx.message.document;
-      if (doc.file_size === undefined || doc.file_size > MAX_FILE_BYTES) {
-        await ctx.reply(`Файл слишком большой (максимум ${MAX_FILE_BYTES / 1024 / 1024} МБ).`);
+      if (doc.file_size === undefined || doc.file_size > 20 * 1024 * 1024) {
+        await ctx.reply(`Файл слишком большой (максимум 20 МБ).`);
         return;
       }
       const fileName = doc.file_name ?? `document-${doc.file_id}`;
@@ -128,7 +147,7 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
     this.bot.on('message:text', async (ctx) => {
       const text = ctx.message.text;
       if (text.startsWith('/')) {
-        await ctx.reply('Неизвестная команда. Доступно: /learn, /docs, /delete');
+        await ctx.reply('Неизвестная команда. Доступные команды — в меню (кнопка слева).');
         return;
       }
       try {
@@ -140,10 +159,93 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
         await ctx.reply('Произошла ошибка при обработке вопроса. Попробуй ещё раз.');
       }
     });
+
+    this.bot.on('my_chat_member', async (ctx) => {
+      const chat = ctx.myChatMember.chat;
+      if (chat.type === 'private') {
+        return;
+      }
+      const status = ctx.myChatMember.new_chat_member.status;
+      const botIsPresent = status === 'member' || status === 'administrator';
+      try {
+        await syncGroupCommands(this.bot, chat.id, this.config.ADMIN_CHAT_ID, botIsPresent);
+        this.logger.log(`Group commands synced for chat ${chat.id} (present: ${botIsPresent})`);
+      } catch (error) {
+        this.logger.error(
+          `Group sync failed for ${chat.id}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    });
   }
 
   private isAdmin(ctx: Context): boolean {
     return ctx.from?.id === this.config.ADMIN_CHAT_ID;
+  }
+
+  private async renderDocsPage(ctx: Context, page: number, edit: boolean): Promise<void> {
+    const docs = await this.ingest.getDocumentsPage(page + 1, PAGE_SIZE);
+    const text = docsListText(docs);
+    const keyboard = buildDocsListKeyboard(docs, (p) => (p - 1) * PAGE_SIZE);
+
+    if (edit) {
+      await ctx.editMessageText(text, { reply_markup: keyboard });
+    } else {
+      await ctx.reply(text, { reply_markup: keyboard });
+    }
+  }
+
+  private async showDocument(ctx: Context, documentId: string, backOffset: number): Promise<void> {
+    const doc = await this.ingest.getDocument(documentId);
+    if (!doc) {
+      await ctx.editMessageText('Документ уже удалён.', {
+        reply_markup: undefined,
+      });
+      return;
+    }
+    await ctx.editMessageText(docDetailText(doc), {
+      reply_markup: buildDocDetailKeyboard(documentId, backOffset),
+    });
+  }
+
+  private async showDeleteConfirmation(
+    ctx: Context,
+    documentId: string,
+    backOffset: number,
+  ): Promise<void> {
+    const doc = await this.ingest.getDocument(documentId);
+    if (!doc) {
+      await ctx.editMessageText('Документ уже удалён.', {
+        reply_markup: undefined,
+      });
+      return;
+    }
+    await ctx.editMessageText(`Удалить «${doc.fileName}»?`, {
+      reply_markup: buildConfirmDeleteKeyboard(documentId, backOffset),
+    });
+  }
+
+  private async deleteDocument(
+    ctx: Context,
+    documentId: string,
+    backOffset: number,
+  ): Promise<void> {
+    const doc = await this.ingest.getDocument(documentId);
+    if (!doc) {
+      await ctx.editMessageText('Документ уже удалён.');
+      return;
+    }
+
+    await this.ingest.deleteDocument(documentId);
+
+    const page = Math.floor(backOffset / PAGE_SIZE) + 1;
+    const docs = await this.ingest.getDocumentsPage(page, PAGE_SIZE);
+    if (docs.total === 0) {
+      await ctx.editMessageText(docsListText(docs));
+      return;
+    }
+    await ctx.editMessageText(`${deletedText(doc.fileName)}\n\n${docsListText(docs)}`, {
+      reply_markup: buildDocsListKeyboard(docs, (p) => (p - 1) * PAGE_SIZE),
+    });
   }
 
   private async downloadFile(filePath: string | undefined): Promise<Buffer> {
