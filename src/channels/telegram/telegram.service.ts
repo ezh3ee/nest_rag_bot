@@ -255,14 +255,16 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
 
     await this.ingest.deleteDocument(documentId);
 
-    const page = Math.floor(backOffset / PAGE_SIZE) + 1;
+    // const page = Math.floor(backOffset / PAGE_SIZE) + 1;
+    const page = backOffset + 1;
     const docs = await this.ingest.getDocumentsPage(page, PAGE_SIZE);
     if (docs.total === 0) {
       await ctx.editMessageText(docsListText(docs));
       return;
     }
     await ctx.editMessageText(`${deletedText(doc.fileName)}\n\n${docsListText(docs)}`, {
-      reply_markup: buildDocsListKeyboard(docs, (p) => (p - 1) * PAGE_SIZE),
+      // reply_markup: buildDocsListKeyboard(docs, (p) => (p - 1) * PAGE_SIZE),
+      reply_markup: buildDocsListKeyboard(docs, (p) => p - 1),
     });
   }
 
