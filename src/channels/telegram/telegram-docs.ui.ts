@@ -16,6 +16,8 @@ export const Action = {
   VIEW: 'v',
   DELETE: 'd',
   CONFIRM: 'c',
+  DELETE_ALL: 'da',
+  CONFIRM_ALL: 'ca',
 } as const;
 
 export type ActionType = (typeof Action)[keyof typeof Action];
@@ -47,6 +49,14 @@ export function parseDocsCallback(data: string): DocsCallback | null {
     }
     return { action, documentId, page };
   }
+  if (action === Action.DELETE_ALL || action === Action.CONFIRM_ALL) {
+    const page = Number(parts[2]);
+    if (!Number.isInteger(page) || page < 0) {
+      return null;
+    }
+    return { action, documentId: '', page };
+  }
+
   return null;
 }
 
@@ -74,12 +84,14 @@ export function buildDocsListKeyboard(
   callbackPageOf: (page: number) => number,
 ): InlineKeyboard {
   const kb = new InlineKeyboard();
+
   for (const doc of page.items) {
     kb.text(
       `${statusIcon(doc.status)} ${truncate(doc.fileName)}`,
       `docs:v:${doc.id}:${callbackPageOf(page.page)}`,
     ).row();
   }
+
   if (page.totalPages > 1) {
     if (page.page > 1) {
       kb.text('⬅️', `docs:p:${callbackPageOf(page.page - 1)}`);
@@ -89,6 +101,8 @@ export function buildDocsListKeyboard(
       kb.text('➡️', `docs:p:${callbackPageOf(page.page + 1)}`);
     }
   }
+
+  if (page.items.length) kb.row().text(`🗑 Удалить все`, `docs:da:${callbackPageOf(page.page)}`);
   return kb;
 }
 
@@ -116,6 +130,13 @@ export function buildConfirmDeleteKeyboard(documentId: string, backPage: number)
   const kb = new InlineKeyboard();
   kb.text('🔥 Да, удалить', `docs:c:${documentId}:${backPage}`);
   kb.text('Отмена', `docs:v:${documentId}:${backPage}`);
+  return kb;
+}
+
+export function buildConfirmDeleteAllKeyboard(backPage: number): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  kb.text('🔥 Да, удалить все документы', `docs:ca`);
+  kb.text('Отмена', `docs:p:${backPage}`);
   return kb;
 }
 

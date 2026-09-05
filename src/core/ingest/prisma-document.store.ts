@@ -56,6 +56,10 @@ export class PrismaDocumentStore implements DocumentStore {
     await this.prisma.document.delete({ where: { id } });
   }
 
+  async deleteAll(): Promise<void> {
+    await this.prisma.document.deleteMany();
+  }
+
   private toStored(doc: {
     id: string;
     fileName: string;

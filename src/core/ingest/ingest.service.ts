@@ -92,6 +92,12 @@ export class IngestService {
     this.logger.log(`Deleted document ${documentId}`);
   }
 
+  async deleteAll(): Promise<void> {
+    await this.qdrant.deleteCollection();
+    await this.store.deleteAll();
+    this.logger.log('Deleted all documents');
+  }
+
   async getDocumentsPage(page: number, pageSize: number): Promise<DocumentsPage> {
     const total = await this.store.count();
     const totalPages = Math.max(1, Math.ceil(total / pageSize));

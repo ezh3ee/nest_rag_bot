@@ -14,6 +14,7 @@ import { IngestService } from '../../core/ingest/ingest.service';
 import { syncCommandMenus, syncGroupCommands } from './telegram-commands';
 import {
   Action,
+  buildConfirmDeleteAllKeyboard,
   buildConfirmDeleteKeyboard,
   buildDocDetailKeyboard,
   buildDocsListKeyboard,
@@ -125,6 +126,14 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
           case Action.CONFIRM:
             await ctx.answerCallbackQuery();
             await this.deleteDocument(ctx, parsed.documentId, page);
+            return;
+          case Action.DELETE_ALL:
+            await ctx.answerCallbackQuery();
+            await this.showDeleteAllConfirmation(ctx, page);
+            return;
+          case Action.CONFIRM_ALL:
+            await ctx.answerCallbackQuery();
+            await this.deleteAllDocuments(ctx);
             return;
         }
       } catch (error) {
@@ -272,6 +281,15 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
     });
   }
 
+  private async showDeleteAllConfirmation(ctx: Context, backPage: number): Promise<void> {
+    await ctx.editMessageText(
+      `⚠️ВНИМАНИЕ! Данное действие удалит все документы из базы данных.\n\nУдалить все документы?`,
+      {
+        reply_markup: buildConfirmDeleteAllKeyboard(backPage),
+      },
+    );
+  }
+
   private async deleteDocument(ctx: Context, documentId: string, backPage: number): Promise<void> {
     const doc = await this.ingest.getDocument(documentId);
     if (!doc) {
@@ -290,6 +308,12 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
     await ctx.editMessageText(`${deletedText(doc.fileName)}\n\n${docsListText(docs)}`, {
       reply_markup: buildDocsListKeyboard(docs, (p) => p - 1),
     });
+  }
+
+  private async deleteAllDocuments(ctx: Context): Promise<void> {
+    console.log('deleteAllDocuments called');
+    await this.ingest.deleteAll();
+    await ctx.editMessageText('Все документы удалены.');
   }
 
   private async downloadFile(filePath: string | undefined): Promise<Buffer> {
