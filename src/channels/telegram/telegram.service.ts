@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { Bot, GrammyError, type Context } from 'grammy';
+import { Agent, fetch as undiciFetch } from 'undici';
 import appConfig from '../../config/app.config';
 import { ChatService } from '../../core/chat.service';
 import { IngestService } from '../../core/ingest/ingest.service';
@@ -26,6 +27,10 @@ import {
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_FILE_MB = 20;
+
+const FETCH_TIMEOUT_SECONDS = 30 * 1000;
+
+const PARSE_FILE_RETRIES = 5;
 
 @Injectable()
 export class TelegramService implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -101,23 +106,25 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
         return;
       }
 
+      const page = Number(parsed.page);
+
       try {
         switch (parsed.action) {
           case Action.PAGE:
             await ctx.answerCallbackQuery();
-            await this.renderDocsPage(ctx, parsed.page, true);
+            await this.renderDocsPage(ctx, page, true);
             return;
           case Action.VIEW:
             await ctx.answerCallbackQuery();
-            await this.showDocument(ctx, parsed.documentId, parsed.page);
+            await this.showDocument(ctx, parsed.documentId, page);
             return;
           case Action.DELETE:
             await ctx.answerCallbackQuery();
-            await this.showDeleteConfirmation(ctx, parsed.documentId, parsed.page);
+            await this.showDeleteConfirmation(ctx, parsed.documentId, page);
             return;
           case Action.CONFIRM:
             await ctx.answerCallbackQuery();
-            await this.deleteDocument(ctx, parsed.documentId, parsed.page);
+            await this.deleteDocument(ctx, parsed.documentId, page);
             return;
         }
       } catch (error) {
@@ -145,18 +152,43 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
       const fileName = doc.file_name ?? `document-${doc.file_id}`;
       const status = await ctx.reply(`⏳ Обрабатываю ${fileName}...`);
 
-      try {
-        const file = await ctx.getFile();
-        const buffer = await this.downloadFile(file.file_path);
-        const result = await this.ingest.ingest(fileName, buffer);
-        await ctx.api.editMessageText(
-          ctx.chat.id,
-          status.message_id,
-          `✅ ${fileName}: ${result.document.chunkCount} чанков добавлено.`,
-        );
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        await ctx.api.editMessageText(ctx.chat.id, status.message_id, `❌ Ошибка: ${message}`);
+      let currentTry = 0;
+      while (currentTry <= PARSE_FILE_RETRIES) {
+        try {
+          if (currentTry) {
+            await ctx.api.editMessageText(
+              ctx.chat.id,
+              status.message_id,
+              `⏳ Попытка ${currentTry}. Обрабатываю ${fileName}...`,
+            );
+          }
+
+          const file = await ctx.getFile();
+          const buffer = await this.downloadFile(file.file_path);
+          const result = await this.ingest.ingest(fileName, buffer);
+          await ctx.api.editMessageText(
+            ctx.chat.id,
+            status.message_id,
+            `✅ ${fileName}: ${result.document.chunkCount} чанков добавлено.`,
+          );
+
+          break;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          this.logger.error(`Ingest failed for "${fileName}": ${message}`, error);
+
+          if (currentTry === PARSE_FILE_RETRIES) {
+            await ctx.api.editMessageText(
+              ctx.chat.id,
+              status.message_id,
+              `❌ Ошибка загрузки файла: ${message}.`,
+            );
+
+            return;
+          }
+
+          currentTry++;
+        }
       }
     });
 
@@ -265,7 +297,9 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
       throw new Error('Telegram did not return a file path');
     }
     const url = `https://api.telegram.org/file/bot${this.config.TELEGRAM_BOT_TOKEN}/${filePath}`;
-    const response = await fetch(url);
+    const response = await undiciFetch(url, {
+      dispatcher: new Agent({ connectTimeout: FETCH_TIMEOUT_SECONDS }),
+    });
     if (!response.ok) {
       throw new Error(`File download failed: HTTP ${response.status}`);
     }
