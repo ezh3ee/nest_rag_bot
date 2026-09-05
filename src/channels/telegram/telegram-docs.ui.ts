@@ -49,13 +49,15 @@ export function parseDocsCallback(data: string): DocsCallback | null {
     }
     return { action, documentId, page };
   }
-  if (action === Action.DELETE_ALL || action === Action.CONFIRM_ALL) {
+  if (action === Action.DELETE_ALL) {
     const page = Number(parts[2]);
     if (!Number.isInteger(page) || page < 0) {
       return null;
     }
     return { action, documentId: '', page };
   }
+
+  if (action === Action.CONFIRM_ALL) return { action, documentId: '', page: 0 };
 
   return null;
 }
