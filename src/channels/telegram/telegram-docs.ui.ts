@@ -23,31 +23,29 @@ export type ActionType = (typeof Action)[keyof typeof Action];
 export interface DocsCallback {
   action: ActionType;
   documentId: string;
-  offset: number;
+  page: number;
 }
 
 export function parseDocsCallback(data: string): DocsCallback | null {
-  console.log(data);
   const parts = data.split(':');
   if (parts.length < 2 || parts[0] !== 'docs') {
     return null;
   }
   const action = parts[1];
-  console.log('action ', action);
   if (action === Action.PAGE) {
-    const offset = Number(parts[2]);
-    if (!Number.isInteger(offset) || offset < 0) {
+    const page = Number(parts[2]);
+    if (!Number.isInteger(page) || page < 0) {
       return null;
     }
-    return { action: Action.PAGE, documentId: '', offset };
+    return { action: Action.PAGE, documentId: '', page };
   }
   if (action === Action.VIEW || action === Action.DELETE || action === Action.CONFIRM) {
     const documentId = parts[2] ?? '';
-    const offset = Number(parts[3] ?? 0);
-    if (!documentId || !Number.isInteger(offset) || offset < 0) {
+    const page = Number(parts[3] ?? 0);
+    if (!documentId || !Number.isInteger(page) || page < 0) {
       return null;
     }
-    return { action, documentId, offset };
+    return { action, documentId, page };
   }
   return null;
 }
@@ -73,22 +71,22 @@ export function docsListText(page: DocumentsPage): string {
 
 export function buildDocsListKeyboard(
   page: DocumentsPage,
-  offsetOf: (page: number) => number,
+  callbackPageOf: (page: number) => number,
 ): InlineKeyboard {
   const kb = new InlineKeyboard();
   for (const doc of page.items) {
     kb.text(
       `${statusIcon(doc.status)} ${truncate(doc.fileName)}`,
-      `docs:v:${doc.id}:${offsetOf(page.page)}`,
+      `docs:v:${doc.id}:${callbackPageOf(page.page)}`,
     ).row();
   }
   if (page.totalPages > 1) {
     if (page.page > 1) {
-      kb.text('⬅️', `docs:p:${offsetOf(page.page - 1)}`);
+      kb.text('⬅️', `docs:p:${callbackPageOf(page.page - 1)}`);
     }
     kb.text(`${page.page}/${page.totalPages}`, 'docs:noop');
     if (page.page < page.totalPages) {
-      kb.text('➡️', `docs:p:${offsetOf(page.page + 1)}`);
+      kb.text('➡️', `docs:p:${callbackPageOf(page.page + 1)}`);
     }
   }
   return kb;
@@ -107,17 +105,17 @@ export function docDetailText(doc: StoredDocument): string {
   ].join('\n');
 }
 
-export function buildDocDetailKeyboard(documentId: string, backOffset: number): InlineKeyboard {
+export function buildDocDetailKeyboard(documentId: string, backPage: number): InlineKeyboard {
   const kb = new InlineKeyboard();
-  kb.text('🗑 Удалить', `docs:d:${documentId}:${backOffset}`);
-  kb.text('⬅️ Назад', `docs:p:${backOffset}`);
+  kb.text('🗑 Удалить', `docs:d:${documentId}:${backPage}`);
+  kb.text('⬅️ Назад', `docs:p:${backPage}`);
   return kb;
 }
 
-export function buildConfirmDeleteKeyboard(documentId: string, backOffset: number): InlineKeyboard {
+export function buildConfirmDeleteKeyboard(documentId: string, backPage: number): InlineKeyboard {
   const kb = new InlineKeyboard();
-  kb.text('🔥 Да, удалить', `docs:c:${documentId}:${backOffset}`);
-  kb.text('Отмена', `docs:v:${documentId}:${backOffset}`);
+  kb.text('🔥 Да, удалить', `docs:c:${documentId}:${backPage}`);
+  kb.text('Отмена', `docs:v:${documentId}:${backPage}`);
   return kb;
 }
 

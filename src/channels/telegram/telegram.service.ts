@@ -105,19 +105,19 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
         switch (parsed.action) {
           case Action.PAGE:
             await ctx.answerCallbackQuery();
-            await this.renderDocsPage(ctx, parsed.offset, true);
+            await this.renderDocsPage(ctx, parsed.page, true);
             return;
           case Action.VIEW:
             await ctx.answerCallbackQuery();
-            await this.showDocument(ctx, parsed.documentId, parsed.offset);
+            await this.showDocument(ctx, parsed.documentId, parsed.page);
             return;
           case Action.DELETE:
             await ctx.answerCallbackQuery();
-            await this.showDeleteConfirmation(ctx, parsed.documentId, parsed.offset);
+            await this.showDeleteConfirmation(ctx, parsed.documentId, parsed.page);
             return;
           case Action.CONFIRM:
             await ctx.answerCallbackQuery();
-            await this.deleteDocument(ctx, parsed.documentId, parsed.offset);
+            await this.deleteDocument(ctx, parsed.documentId, parsed.page);
             return;
         }
       } catch (error) {
@@ -199,10 +199,8 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
   }
 
   private async renderDocsPage(ctx: Context, page: number, edit: boolean): Promise<void> {
-    console.log('page', page);
     const docs = await this.ingest.getDocumentsPage(page + 1, PAGE_SIZE);
     const text = docsListText(docs);
-    // const keyboard = buildDocsListKeyboard(docs, (p) => (p - 1) * PAGE_SIZE);
     const keyboard = buildDocsListKeyboard(docs, (p) => p - 1);
 
     if (edit) {
@@ -212,7 +210,7 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
     }
   }
 
-  private async showDocument(ctx: Context, documentId: string, backOffset: number): Promise<void> {
+  private async showDocument(ctx: Context, documentId: string, backPage: number): Promise<void> {
     const doc = await this.ingest.getDocument(documentId);
     if (!doc) {
       await ctx.editMessageText('Документ уже удалён.', {
@@ -221,14 +219,14 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
       return;
     }
     await ctx.editMessageText(docDetailText(doc), {
-      reply_markup: buildDocDetailKeyboard(documentId, backOffset),
+      reply_markup: buildDocDetailKeyboard(documentId, backPage),
     });
   }
 
   private async showDeleteConfirmation(
     ctx: Context,
     documentId: string,
-    backOffset: number,
+    backPage: number,
   ): Promise<void> {
     const doc = await this.ingest.getDocument(documentId);
     if (!doc) {
@@ -238,15 +236,11 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
       return;
     }
     await ctx.editMessageText(`Удалить «${doc.fileName}»?`, {
-      reply_markup: buildConfirmDeleteKeyboard(documentId, backOffset),
+      reply_markup: buildConfirmDeleteKeyboard(documentId, backPage),
     });
   }
 
-  private async deleteDocument(
-    ctx: Context,
-    documentId: string,
-    backOffset: number,
-  ): Promise<void> {
+  private async deleteDocument(ctx: Context, documentId: string, backPage: number): Promise<void> {
     const doc = await this.ingest.getDocument(documentId);
     if (!doc) {
       await ctx.editMessageText('Документ уже удалён.');
@@ -255,15 +249,13 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
 
     await this.ingest.deleteDocument(documentId);
 
-    // const page = Math.floor(backOffset / PAGE_SIZE) + 1;
-    const page = backOffset + 1;
+    const page = backPage + 1;
     const docs = await this.ingest.getDocumentsPage(page, PAGE_SIZE);
     if (docs.total === 0) {
       await ctx.editMessageText(docsListText(docs));
       return;
     }
     await ctx.editMessageText(`${deletedText(doc.fileName)}\n\n${docsListText(docs)}`, {
-      // reply_markup: buildDocsListKeyboard(docs, (p) => (p - 1) * PAGE_SIZE),
       reply_markup: buildDocsListKeyboard(docs, (p) => p - 1),
     });
   }
