@@ -13,7 +13,16 @@ export interface IngestResult {
   document: StoredDocument;
 }
 
-const PARSER_EXTENSIONS: Record<string, 'pdf' | 'docx' | 'text'> = {
+export interface DocumentsPage {
+  items: StoredDocument[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+type FileType = 'pdf' | 'docx' | 'text';
+
+const PARSER_EXTENSIONS: Record<string, FileType> = {
   '.pdf': 'pdf',
   '.docx': 'docx',
   '.doc': 'docx',
@@ -21,6 +30,15 @@ const PARSER_EXTENSIONS: Record<string, 'pdf' | 'docx' | 'text'> = {
   '.md': 'text',
   '.markdown': 'text',
 };
+
+export function isSupportedFileName(fileName: string): boolean {
+  return getExtension(fileName) in PARSER_EXTENSIONS;
+}
+
+function getExtension(fileName: string): string {
+  const idx = fileName.lastIndexOf('.');
+  return idx === -1 ? '' : fileName.slice(idx).toLowerCase();
+}
 
 @Injectable()
 export class IngestService {
@@ -37,7 +55,7 @@ export class IngestService {
   ) {}
 
   async ingest(fileName: string, buffer: Buffer): Promise<IngestResult> {
-    const ext = this.extensionOf(fileName);
+    const ext = getExtension(fileName);
     const fileType = PARSER_EXTENSIONS[ext];
     if (!fileType) {
       throw new Error(`Unsupported file type: ${ext}. Supported: pdf, docx, txt, md`);
@@ -85,8 +103,24 @@ export class IngestService {
     this.logger.log(`Deleted document ${documentId}`);
   }
 
-  async listDocuments(): Promise<StoredDocument[]> {
-    return this.store.list();
+  async deleteAll(): Promise<void> {
+    await this.qdrant.deleteAllDocuments();
+    await this.store.deleteAll();
+    this.logger.log('Deleted all documents');
+  }
+
+  async getDocumentsPage(page: number, pageSize: number): Promise<DocumentsPage> {
+    const total = await this.store.count();
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const safePage = Math.min(Math.max(1, page), totalPages);
+    const skip = (safePage - 1) * pageSize;
+
+    const items = await this.store.listPage(skip, pageSize);
+    return { items, total, page: safePage, totalPages };
+  }
+
+  async getDocument(documentId: string): Promise<StoredDocument | null> {
+    return this.store.get(documentId);
   }
 
   private async parse(fileType: 'pdf' | 'docx' | 'text', buffer: Buffer): Promise<string> {
@@ -98,10 +132,5 @@ export class IngestService {
       case 'text':
         return this.textParser.parse(buffer);
     }
-  }
-
-  private extensionOf(fileName: string): string {
-    const idx = fileName.lastIndexOf('.');
-    return idx === -1 ? '' : fileName.slice(idx).toLowerCase();
   }
 }

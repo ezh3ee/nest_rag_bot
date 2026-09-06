@@ -69,4 +69,11 @@ export class QdrantService {
     });
     this.logger.log(`Deleted points for document ${documentId}`);
   }
+
+  async deleteAllDocuments(): Promise<void> {
+    await this.client.delete(this.config.QDRANT_COLLECTION, {
+      filter: {},
+    });
+    this.logger.log(`Deleted all the documents ${this.config.QDRANT_COLLECTION}`);
+  }
 }
