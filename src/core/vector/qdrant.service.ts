@@ -74,6 +74,6 @@ export class QdrantService {
     await this.client.delete(this.config.QDRANT_COLLECTION, {
       filter: {},
     });
-    this.logger.log(`Deleted collection ${this.config.QDRANT_COLLECTION}`);
+    this.logger.log(`Deleted all the documents ${this.config.QDRANT_COLLECTION}`);
   }
 }

@@ -24,7 +24,7 @@ const networkCauseSchema = z.object({
   ]),
 });
 
-export function isNetworkError(error: unknown): boolean {
+function isNetworkError(error: unknown): boolean {
   return error instanceof TypeError && networkCauseSchema.safeParse(error.cause).success;
 }
 
