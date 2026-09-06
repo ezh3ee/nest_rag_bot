@@ -6,6 +6,8 @@ import type { EmbeddingOpenAILikeConfig } from '../../../../config/llm.schema';
 
 type OpenAICompatibleEmbeddingConfig = EmbeddingOpenAILikeConfig;
 
+const JINA_BATCH_SIZE = 1024; // hard cap: max inputs per Jina embeddings request
+
 export class JinaEmbeddings extends Embeddings {
   private readonly model: EmbeddingModelV2<string>;
 
@@ -21,8 +23,13 @@ export class JinaEmbeddings extends Embeddings {
   }
 
   async embedDocuments(texts: string[]): Promise<number[][]> {
-    const { embeddings } = await embedMany({ model: this.model, values: texts });
-    return embeddings.map((e) => Array.from(e));
+    const result: number[][] = [];
+    for (let i = 0; i < texts.length; i += JINA_BATCH_SIZE) {
+      const batch = texts.slice(i, i + JINA_BATCH_SIZE);
+      const { embeddings } = await embedMany({ model: this.model, values: batch });
+      result.push(...embeddings.map((e) => Array.from(e)));
+    }
+    return result;
   }
 
   async embedQuery(text: string): Promise<number[]> {
