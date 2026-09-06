@@ -5,6 +5,7 @@ import { ChunkerService } from './chunker.service';
 import type { DocumentStore, StoredDocument } from './document-store.interface';
 import { DOCUMENT_STORE } from './document-store.interface';
 import { DocumentNotFoundError } from './errors';
+import { ExcelParser } from './parsers/excel.parser';
 import { DocxParser } from './parsers/docx.parser';
 import { PdfParser } from './parsers/pdf.parser';
 import { TextParser } from './parsers/text.parser';
@@ -20,7 +21,7 @@ export interface DocumentsPage {
   totalPages: number;
 }
 
-type FileType = 'pdf' | 'docx' | 'text';
+type FileType = 'pdf' | 'docx' | 'text' | 'excel';
 
 const PARSER_EXTENSIONS: Record<string, FileType> = {
   '.pdf': 'pdf',
@@ -29,6 +30,8 @@ const PARSER_EXTENSIONS: Record<string, FileType> = {
   '.txt': 'text',
   '.md': 'text',
   '.markdown': 'text',
+  '.xlsx': 'excel',
+  '.xls': 'excel',
 };
 
 export function isSupportedFileName(fileName: string): boolean {
@@ -52,13 +55,14 @@ export class IngestService {
     private readonly pdfParser: PdfParser,
     private readonly docxParser: DocxParser,
     private readonly textParser: TextParser,
+    private readonly excelParser: ExcelParser,
   ) {}
 
   async ingest(fileName: string, buffer: Buffer): Promise<IngestResult> {
     const ext = getExtension(fileName);
     const fileType = PARSER_EXTENSIONS[ext];
     if (!fileType) {
-      throw new Error(`Unsupported file type: ${ext}. Supported: pdf, docx, txt, md`);
+      throw new Error(`Unsupported file type: ${ext}. Supported: pdf, docx, txt, md, xlsx`);
     }
 
     const documentId = randomUUID();
@@ -123,7 +127,7 @@ export class IngestService {
     return this.store.get(documentId);
   }
 
-  private async parse(fileType: 'pdf' | 'docx' | 'text', buffer: Buffer): Promise<string> {
+  private async parse(fileType: FileType, buffer: Buffer): Promise<string> {
     switch (fileType) {
       case 'pdf':
         return this.pdfParser.parse(buffer);
@@ -131,6 +135,8 @@ export class IngestService {
         return this.docxParser.parse(buffer);
       case 'text':
         return this.textParser.parse(buffer);
+      case 'excel':
+        return this.excelParser.parse(buffer);
     }
   }
 }
