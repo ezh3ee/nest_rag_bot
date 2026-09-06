@@ -1,6 +1,6 @@
 import { Agent, fetch as undiciFetch } from 'undici';
 
-const FETCH_TIMEOUT_SECONDS = 30 * 1000;
+const FETCH_TIMEOUT_SECONDS = 15 * 1000;
 
 export async function downloadTelegramFile(
   botToken: string,
@@ -9,6 +9,7 @@ export async function downloadTelegramFile(
   if (!filePath) {
     throw new Error('Telegram did not return a file path');
   }
+
   const url = `https://api.telegram.org/file/bot${botToken}/${filePath}`;
   const response = await undiciFetch(url, {
     dispatcher: new Agent({ connectTimeout: FETCH_TIMEOUT_SECONDS }),

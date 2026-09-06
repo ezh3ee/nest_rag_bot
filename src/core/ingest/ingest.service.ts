@@ -20,7 +20,9 @@ export interface DocumentsPage {
   totalPages: number;
 }
 
-const PARSER_EXTENSIONS: Record<string, 'pdf' | 'docx' | 'text'> = {
+type FileType = 'pdf' | 'docx' | 'text';
+
+const PARSER_EXTENSIONS: Record<string, FileType> = {
   '.pdf': 'pdf',
   '.docx': 'docx',
   '.doc': 'docx',
@@ -28,6 +30,15 @@ const PARSER_EXTENSIONS: Record<string, 'pdf' | 'docx' | 'text'> = {
   '.md': 'text',
   '.markdown': 'text',
 };
+
+export function isSupportedFileName(fileName: string): boolean {
+  return getExtension(fileName) in PARSER_EXTENSIONS;
+}
+
+function getExtension(fileName: string): string {
+  const idx = fileName.lastIndexOf('.');
+  return idx === -1 ? '' : fileName.slice(idx).toLowerCase();
+}
 
 @Injectable()
 export class IngestService {
@@ -44,7 +55,7 @@ export class IngestService {
   ) {}
 
   async ingest(fileName: string, buffer: Buffer): Promise<IngestResult> {
-    const ext = this.extensionOf(fileName);
+    const ext = getExtension(fileName);
     const fileType = PARSER_EXTENSIONS[ext];
     if (!fileType) {
       throw new Error(`Unsupported file type: ${ext}. Supported: pdf, docx, txt, md`);
@@ -93,7 +104,7 @@ export class IngestService {
   }
 
   async deleteAll(): Promise<void> {
-    await this.qdrant.deleteCollection();
+    await this.qdrant.deleteAllDocuments();
     await this.store.deleteAll();
     this.logger.log('Deleted all documents');
   }
@@ -121,10 +132,5 @@ export class IngestService {
       case 'text':
         return this.textParser.parse(buffer);
     }
-  }
-
-  private extensionOf(fileName: string): string {
-    const idx = fileName.lastIndexOf('.');
-    return idx === -1 ? '' : fileName.slice(idx).toLowerCase();
   }
 }

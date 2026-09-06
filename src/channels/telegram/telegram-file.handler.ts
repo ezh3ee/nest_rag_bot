@@ -1,8 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import type { Bot, Context, Filter } from 'grammy';
+import { z } from 'zod';
 import appConfig from '../../config/app.config';
-import { IngestService } from '../../core/ingest/ingest.service';
+import { IngestService, isSupportedFileName } from '../../core/ingest/ingest.service';
 import { downloadTelegramFile } from './telegram-files';
 import { isAdmin } from './telegram-guards';
 
@@ -11,6 +12,21 @@ type DocumentContext = Filter<Context, 'message:document'>;
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_FILE_MB = 20;
 const PARSE_FILE_RETRIES = 5;
+
+const networkCauseSchema = z.object({
+  code: z.enum([
+    'UND_ERR_CONNECT_TIMEOUT',
+    'UND_ERR_SOCKET',
+    'UND_ERR_HEADERS_TIMEOUT',
+    'ECONNRESET',
+    'ETIMEDOUT',
+    'ECONNREFUSED',
+  ]),
+});
+
+export function isNetworkError(error: unknown): boolean {
+  return error instanceof TypeError && networkCauseSchema.safeParse(error.cause).success;
+}
 
 @Injectable()
 export class FileHandler {
@@ -40,12 +56,21 @@ export class FileHandler {
       await ctx.reply('⛔ Обучение доступно только администратору.');
       return;
     }
+
     const doc = ctx.message.document;
+
     if (doc.file_size === undefined || doc.file_size > MAX_FILE_BYTES) {
       await ctx.reply(`Файл слишком большой (максимум ${MAX_FILE_MB} МБ).`);
       return;
     }
+
     const fileName = doc.file_name ?? `document-${doc.file_id}`;
+
+    if (!isSupportedFileName(fileName)) {
+      await ctx.reply('⛔ Формат не поддерживается. Пришли файл: pdf, docx, txt, md');
+      return;
+    }
+
     const status = await ctx.reply(`⏳ Обрабатываю ${fileName}...`);
 
     let currentTry = 0;
@@ -71,17 +96,21 @@ export class FileHandler {
         break;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        this.logger.error(`Ingest failed for "${fileName}": ${message}`, error);
-
-        if (currentTry === PARSE_FILE_RETRIES) {
+        if (!isNetworkError(error) || currentTry >= PARSE_FILE_RETRIES) {
           await ctx.api.editMessageText(
             ctx.chat.id,
             status.message_id,
             `❌ Ошибка загрузки файла: ${message}.`,
           );
 
+          this.logger.error(`Ingest failed for "${fileName}": ${message}`, error);
+
           return;
         }
+
+        this.logger.warn(
+          `Network error on ingest try ${currentTry} for "${fileName}": ${message}. Retrying...`,
+        );
 
         currentTry++;
       }
