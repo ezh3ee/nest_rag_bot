@@ -20,5 +20,8 @@ export default tseslint.config(
         tsconfigRootDir: import.meta.dirname,
       },
     },
+    rules: {
+      'prettier/prettier': ['error', { endOfLine: 'auto' }],
+    },
   },
 );
