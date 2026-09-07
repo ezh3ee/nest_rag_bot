@@ -41,7 +41,7 @@ export class FileHandler {
   register(bot: Bot): void {
     bot.command('learn', async (ctx) => {
       const usage =
-        'Отправь мне документ (pdf, docx, txt, md) — я обучусь по нему. ' +
+        'Отправь мне документ (pdf, docx, txt, md, xlsx) — я обучусь по нему. ' +
         'Управление документами: /docs';
       await ctx.reply(usage);
     });
@@ -67,7 +67,7 @@ export class FileHandler {
     const fileName = doc.file_name ?? `document-${doc.file_id}`;
 
     if (!isSupportedFileName(fileName)) {
-      await ctx.reply('⛔ Формат не поддерживается. Пришли файл: pdf, docx, txt, md');
+      await ctx.reply('⛔ Формат не поддерживается. Пришли файл: pdf, docx, txt, md, xlsx');
       return;
     }
 
