@@ -1,10 +1,15 @@
-export type DocumentStatus = 'pending' | 'processing' | 'done' | 'error';
+export const DocumentStatus = {
+  PENDING: 'pending',
+  PROCESSING: 'processing',
+  DONE: 'done',
+  ERROR: 'error',
+} as const;
 
 export interface StoredDocument {
   id: string;
   fileName: string;
   fileType: string;
-  status: DocumentStatus;
+  status: (typeof DocumentStatus)[keyof typeof DocumentStatus];
   chunkCount: number;
   errorMessage?: string;
   createdAt: Date;

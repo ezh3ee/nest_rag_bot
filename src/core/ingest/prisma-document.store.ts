@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import type { DocumentStatus, DocumentStore, StoredDocument } from './document-store.interface';
+import { DocumentStatus, DocumentStore, StoredDocument } from './document-store.interface';
+
+const documentStatuses = Object.values(DocumentStatus);
 
 @Injectable()
 export class PrismaDocumentStore implements DocumentStore {
@@ -64,16 +66,18 @@ export class PrismaDocumentStore implements DocumentStore {
     id: string;
     fileName: string;
     fileType: string;
-    status: string;
+    status: (typeof documentStatuses)[number];
     chunkCount: number;
     errorMessage: string | null;
     createdAt: Date;
   }): StoredDocument {
+    if (!documentStatuses.includes(doc.status)) throw new Error(`Invalid status: ${doc.status}`);
+
     return {
       id: doc.id,
       fileName: doc.fileName,
       fileType: doc.fileType,
-      status: doc.status as DocumentStatus,
+      status: doc.status,
       chunkCount: doc.chunkCount,
       errorMessage: doc.errorMessage ?? undefined,
       createdAt: doc.createdAt,

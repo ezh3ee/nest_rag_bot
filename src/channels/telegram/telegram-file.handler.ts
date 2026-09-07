@@ -74,7 +74,7 @@ export class FileHandler {
     const status = await ctx.reply(`⏳ Обрабатываю ${fileName}...`);
 
     let currentTry = 0;
-    while (currentTry <= PARSE_FILE_RETRIES) {
+    while (currentTry < PARSE_FILE_RETRIES) {
       try {
         if (currentTry) {
           await ctx.api.editMessageText(

@@ -7,12 +7,20 @@ datasource db {
   provider = "sqlite"
 }
 
+enum DocumentStatus {
+  pending
+  processing
+  done
+  error
+}
+
 model Document {
-  id           String   @id @default(uuid())
+  id           String         @id @default(uuid())
   fileName     String
   fileType     String
-  status       String   @default("pending")
-  chunkCount   Int      @default(0)
+  // status       String   @default("pending")
+  status       DocumentStatus @default(pending)
+  chunkCount   Int            @default(0)
   errorMessage String?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime       @default(now())
 }

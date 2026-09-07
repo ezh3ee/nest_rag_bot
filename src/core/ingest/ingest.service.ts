@@ -5,8 +5,8 @@ import { ChunkerService } from './chunker.service';
 import type { DocumentStore, StoredDocument } from './document-store.interface';
 import { DOCUMENT_STORE } from './document-store.interface';
 import { DocumentNotFoundError } from './errors';
-import { ExcelParser } from './parsers/excel.parser';
 import { DocxParser } from './parsers/docx.parser';
+import { ExcelParser } from './parsers/excel.parser';
 import { PdfParser } from './parsers/pdf.parser';
 import { TextParser } from './parsers/text.parser';
 
@@ -94,22 +94,29 @@ export class IngestService {
     }
 
     const updated = await this.store.get(documentId);
-    return { document: updated! };
+
+    if (!updated) throw new Error(`Couldnt update Document ${documentId}. Maybe It was deleted`);
+
+    return { document: updated };
   }
 
   async deleteDocument(documentId: string): Promise<void> {
     const document = await this.store.get(documentId);
+
     if (!document) {
       throw new DocumentNotFoundError(documentId);
     }
+
     await this.qdrant.deleteByDocument(documentId);
     await this.store.delete(documentId);
+
     this.logger.log(`Deleted document ${documentId}`);
   }
 
   async deleteAll(): Promise<void> {
     await this.qdrant.deleteAllDocuments();
     await this.store.deleteAll();
+
     this.logger.log('Deleted all documents');
   }
 

@@ -9,9 +9,9 @@ import type { ConfigType } from '@nestjs/config';
 import { Bot } from 'grammy';
 import appConfig from '../../config/app.config';
 import { ChatHandler } from './telegram-chat.handler';
+import { syncCommandMenus, syncGroupCommands } from './telegram-commands';
 import { DocsHandler } from './telegram-docs.handler';
 import { FileHandler } from './telegram-file.handler';
-import { syncCommandMenus, syncGroupCommands } from './telegram-commands';
 
 @Injectable()
 export class TelegramService implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -51,6 +51,7 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
 
     await this.bot.start({
       onStart: (me) => this.logger.log(`Bot started as @${me.username}`),
+      drop_pending_updates: true,
     });
   }
 
