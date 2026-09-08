@@ -6,6 +6,7 @@ import type { DocumentStore, StoredDocument } from './document-store.interface';
 import { DOCUMENT_STORE } from './document-store.interface';
 import { DocumentNotFoundError } from './errors';
 import { DocxParser } from './parsers/docx.parser';
+import { ExcelParser } from './parsers/excel.parser';
 import { PdfParser } from './parsers/pdf.parser';
 import { TextParser } from './parsers/text.parser';
 
@@ -20,7 +21,7 @@ export interface DocumentsPage {
   totalPages: number;
 }
 
-type FileType = 'pdf' | 'docx' | 'text';
+type FileType = 'pdf' | 'docx' | 'text' | 'excel';
 
 const PARSER_EXTENSIONS: Record<string, FileType> = {
   '.pdf': 'pdf',
@@ -29,6 +30,8 @@ const PARSER_EXTENSIONS: Record<string, FileType> = {
   '.txt': 'text',
   '.md': 'text',
   '.markdown': 'text',
+  '.xlsx': 'excel',
+  '.xls': 'excel',
 };
 
 export function isSupportedFileName(fileName: string): boolean {
@@ -52,13 +55,14 @@ export class IngestService {
     private readonly pdfParser: PdfParser,
     private readonly docxParser: DocxParser,
     private readonly textParser: TextParser,
+    private readonly excelParser: ExcelParser,
   ) {}
 
   async ingest(fileName: string, buffer: Buffer): Promise<IngestResult> {
     const ext = getExtension(fileName);
     const fileType = PARSER_EXTENSIONS[ext];
     if (!fileType) {
-      throw new Error(`Unsupported file type: ${ext}. Supported: pdf, docx, txt, md`);
+      throw new Error(`Unsupported file type: ${ext}. Supported: pdf, docx, txt, md, xlsx`);
     }
 
     const documentId = randomUUID();
@@ -90,22 +94,29 @@ export class IngestService {
     }
 
     const updated = await this.store.get(documentId);
-    return { document: updated! };
+
+    if (!updated) throw new Error(`Couldnt update Document ${documentId}. Maybe It was deleted`);
+
+    return { document: updated };
   }
 
   async deleteDocument(documentId: string): Promise<void> {
     const document = await this.store.get(documentId);
+
     if (!document) {
       throw new DocumentNotFoundError(documentId);
     }
+
     await this.qdrant.deleteByDocument(documentId);
     await this.store.delete(documentId);
+
     this.logger.log(`Deleted document ${documentId}`);
   }
 
   async deleteAll(): Promise<void> {
     await this.qdrant.deleteAllDocuments();
     await this.store.deleteAll();
+
     this.logger.log('Deleted all documents');
   }
 
@@ -123,7 +134,7 @@ export class IngestService {
     return this.store.get(documentId);
   }
 
-  private async parse(fileType: 'pdf' | 'docx' | 'text', buffer: Buffer): Promise<string> {
+  private async parse(fileType: FileType, buffer: Buffer): Promise<string> {
     switch (fileType) {
       case 'pdf':
         return this.pdfParser.parse(buffer);
@@ -131,6 +142,8 @@ export class IngestService {
         return this.docxParser.parse(buffer);
       case 'text':
         return this.textParser.parse(buffer);
+      case 'excel':
+        return this.excelParser.parse(buffer);
     }
   }
 }

@@ -84,7 +84,6 @@ export class DocsHandler {
           await this.showDeleteAllConfirmation(ctx, page);
           return;
         case Action.CONFIRM_ALL:
-          console.log('CONFIRM_ALL in switch');
           await ctx.answerCallbackQuery();
           await this.deleteAllDocuments(ctx);
           return;

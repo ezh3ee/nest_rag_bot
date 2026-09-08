@@ -28,6 +28,8 @@ export class LLMFactory {
       case 'polza':
       case 'ollama':
         return new OpenAICompatibleGenerationProvider(cfg, maxRetries);
+      default:
+        throw new Error(`Unknown generation provider`);
     }
   }
 
@@ -43,6 +45,8 @@ export class LLMFactory {
       case 'openai':
       case 'ollama':
         return new OpenAICompatibleEmbeddings(cfg, maxRetries);
+      default:
+        throw new Error(`Unknown embedding provider`);
     }
   }
 }
