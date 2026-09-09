@@ -49,10 +49,15 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
       );
     }
 
-    await this.bot.start({
-      onStart: (me) => this.logger.log(`Bot started as @${me.username}`),
-      drop_pending_updates: true,
-    });
+    this.bot
+      .start({
+        onStart: (me) => this.logger.log(`Bot started as @${me.username}`),
+        drop_pending_updates: true,
+      })
+      .then()
+      .catch((e) => {
+        this.logger.error(`Bot start failed: ${e instanceof Error ? e.message : String(e)}`);
+      });
   }
 
   async onApplicationShutdown(): Promise<void> {

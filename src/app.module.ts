@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TelegramModule } from './channels/telegram/telegram.module';
+import { WidgetModule } from './channels/widget/widget.module';
 import appConfig from './config/app.config';
 import llmConfig from './config/llm.config';
 import { CoreModule } from './core/core.module';
@@ -16,6 +17,7 @@ import { PrismaDatabaseModule } from './database/prisma-database.module';
     PrismaDatabaseModule,
     CoreModule,
     TelegramModule,
+    WidgetModule,
   ],
 })
 export class AppModule {}
