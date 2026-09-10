@@ -1,16 +1,11 @@
-import { Module, ValidationPipe } from '@nestjs/common';
-import { APP_PIPE } from '@nestjs/core';
+import { Module } from '@nestjs/common';
+import { CoreModule } from '../../core/core.module';
 import { WidgetController } from './widget.controller';
 import { WidgetService } from './widget.service';
 
 @Module({
+  imports: [CoreModule],
   controllers: [WidgetController],
-  providers: [
-    WidgetService,
-    {
-      provide: APP_PIPE,
-      useValue: new ValidationPipe({ whitelist: true, transform: true }),
-    },
-  ],
+  providers: [WidgetService],
 })
 export class WidgetModule {}
