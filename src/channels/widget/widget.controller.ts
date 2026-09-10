@@ -1,14 +1,11 @@
-import { Controller, Param, Post } from '@nestjs/common';
-
-type WidgetParams = {
-  message: string;
-};
+import { Body, Controller, Post } from '@nestjs/common';
+import { WidgetMessageDto } from './widget.dto';
 
 @Controller('widget')
 export class WidgetController {
-  @Post('message')
-  onChatMessage(@Param() params: WidgetParams): string {
-    console.log(params);
-    return params.message;
+  @Post()
+  onChatMessage(@Body() widgetMessageDto: WidgetMessageDto) {
+    console.log(widgetMessageDto.message);
+    return widgetMessageDto.message;
   }
 }
