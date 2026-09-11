@@ -2,15 +2,33 @@ import { registerAs } from '@nestjs/config';
 import { z, ZodError } from 'zod';
 import { formatZodIssues } from './validation/format-zod-error';
 
-const appConfigSchema = z.object({
-  TELEGRAM_BOT_TOKEN: z.string().min(1),
-  ADMIN_CHAT_ID: z.coerce.number().int().positive(),
+const strictBool = z
+  .string()
+  .default('false')
+  .refine((val) => val === 'true' || val === 'false', {
+    message: "Must be strictly 'true' or 'false'",
+  })
+  .transform((val) => val === 'true');
 
-  QDRANT_URL: z.string().url().default('http://localhost:6333'),
-  QDRANT_COLLECTION: z.string().min(1).default('rag_minimal'),
+const appConfigSchema = z
+  .object({
+    TELEGRAM_BOT_TOKEN: z.string().min(1),
+    ADMIN_CHAT_ID: z.coerce.number().int().positive(),
 
-  DATABASE_URL: z.string().default('file:./dev.db'),
-});
+    QDRANT_URL: z.string().url().default('http://localhost:6333'),
+    QDRANT_COLLECTION: z.string().min(1).default('rag_minimal'),
+
+    DATABASE_URL: z.string().default('file:./dev.db'),
+
+    USE_WIDGET: strictBool,
+    WIDGET_TOKEN: z.string().default(''),
+    WIDGET_ALLOWED_ORIGIN: z.union([z.literal(''), z.string().url()]).default(''),
+    WIDGET_DAILY_LIMIT: z.coerce.number().int().positive().default(200),
+  })
+  .refine((cfg) => !cfg.USE_WIDGET || cfg.WIDGET_TOKEN.length > 0, {
+    message: 'USE_WIDGET=true requires a non-empty WIDGET_TOKEN',
+    path: ['WIDGET_TOKEN'],
+  });
 
 export type AppConfig = z.infer<typeof appConfigSchema>;
 
