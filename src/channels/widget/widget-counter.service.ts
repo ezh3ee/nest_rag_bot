@@ -29,11 +29,13 @@ export class WidgetCounterService {
     if (row.count >= this.config.WIDGET_DAILY_LIMIT) {
       return false;
     }
+    return true;
+  }
 
+  async increment(): Promise<void> {
     await this.prisma.widgetCounter.update({
       where: { id: COUNTER_ID },
       data: { count: { increment: 1 } },
     });
-    return true;
   }
 }
