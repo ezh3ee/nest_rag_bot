@@ -64,5 +64,11 @@
     "@prisma/engines@7.10.0": true,
     "jina-ai-provider@1.0.0": true,
     "prisma@7.10.0": true
+  },
+  "overrides": {
+    "@nestjs/throttler": {
+      "@nestjs/common": "$@nestjs/common",
+      "@nestjs/core": "$@nestjs/core"
+    }
   }
 }
