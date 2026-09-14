@@ -6,7 +6,7 @@ export class WidgetDailyLimitGuard implements CanActivate {
   constructor(private readonly counter: WidgetCounterService) {}
 
   async canActivate(): Promise<boolean> {
-    const allowed = await this.counter.tryConsume();
+    const allowed = await this.counter.check();
     if (!allowed) {
       throw new HttpException('Widget daily limit exceeded', HttpStatus.TOO_MANY_REQUESTS);
     }

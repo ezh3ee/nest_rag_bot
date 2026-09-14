@@ -13,15 +13,15 @@ export class WidgetCounterService {
     private readonly config: ConfigType<typeof appConfig>,
   ) {}
 
-  async tryConsume(): Promise<boolean> {
+  async check(): Promise<boolean> {
     const today = new Date().toISOString().slice(0, 10);
     const row = await this.prisma.widgetCounter.findUnique({ where: { id: COUNTER_ID } });
 
     if (!row || row.date !== today) {
       await this.prisma.widgetCounter.upsert({
         where: { id: COUNTER_ID },
-        create: { id: COUNTER_ID, date: today, count: 1 },
-        update: { date: today, count: 1 },
+        create: { id: COUNTER_ID, date: today, count: 0 },
+        update: { date: today, count: 0 },
       });
       return true;
     }
