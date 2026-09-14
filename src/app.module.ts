@@ -20,7 +20,7 @@ import { PrismaDatabaseModule } from './database/prisma-database.module';
     PrismaDatabaseModule,
     CoreModule,
     TelegramModule,
-    WidgetModule,
+    ...(process.env.USE_WIDGET === 'true' ? [WidgetModule] : []),
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
