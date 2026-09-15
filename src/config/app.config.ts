@@ -12,6 +12,8 @@ const strictBool = z
 
 const appConfigSchema = z
   .object({
+    PORT: z.coerce.number().int().positive().default(3000),
+
     TELEGRAM_BOT_TOKEN: z.string().min(1),
     ADMIN_CHAT_ID: z.coerce.number().int().positive(),
 
