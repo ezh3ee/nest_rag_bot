@@ -23,3 +23,9 @@ model Document {
   errorMessage String?
   createdAt    DateTime       @default(now())
 }
+
+model WidgetCounter {
+  id    String @id
+  date  String
+  count Int    @default(0)
+}
