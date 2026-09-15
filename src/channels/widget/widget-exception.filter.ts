@@ -16,18 +16,10 @@ export class WidgetExceptionFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : '',
     );
 
-    // 5xx наружу не отдаём внутреннее сообщение — там могут быть детали драйвера/провайдера
-    let clientMessage = 'Internal server error';
-    if (status < 500 && exception instanceof HttpException) {
-      const res = exception.getResponse();
-      const raw = typeof res === 'string' ? res : (res as { message?: string | string[] }).message;
-      clientMessage = (Array.isArray(raw) ? raw.join('; ') : raw) ?? exception.message;
-    }
-
     response.status(status).json({
       statusCode: status,
       path: request.url,
-      message: clientMessage,
+      message: exception instanceof HttpException ? exception.message : 'Internal Server Error',
       success: false,
     });
   }
