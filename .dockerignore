@@ -1,0 +1,43 @@
+node_modules
+dist
+build
+coverage
+.nyc_output
+
+.git
+.gitignore
+.gitattributes
+
+# secrets / local env
+.env
+.env.*
+!.env.example
+
+# local data
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+dev.db
+data
+storage
+sessions
+
+# build artifacts / caches
+*.tsbuildinfo
+npm-debug.log*
+logs
+
+# docker / tooling
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# IDE
+.vscode
+.idea
+
+# agent tooling
+opencode.json
+.agents
+.hermes
