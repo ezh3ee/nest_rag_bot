@@ -12,7 +12,10 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "lint": "eslint \"src/**/*.ts\" --fix"
+    "lint": "eslint \"src/**/*.ts\" --fix",
+    "start:prod": "node dist/main.js",
+    "amvera:start": "DATABASE_URL=${DATABASE_URL:-file:/data/prod.db} npx prisma migrate deploy && DATABASE_URL=${DATABASE_URL:-file:/data/prod.db} node dist/main.js",
+    "postinstall": "DATABASE_URL=${DATABASE_URL:-file:/tmp/prisma-generate.db} prisma generate"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.60",

@@ -18,6 +18,7 @@ const appConfigSchema = z
     ADMIN_CHAT_ID: z.coerce.number().int().positive(),
 
     QDRANT_URL: z.string().url().default('http://localhost:6333'),
+    QDRANT_API_KEY: z.string().min(1).default(''),
     QDRANT_COLLECTION: z.string().min(1).default('rag_minimal'),
 
     DATABASE_URL: z.string().default('file:./dev.db'),
