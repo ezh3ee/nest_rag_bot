@@ -22,6 +22,7 @@ const appConfigSchema = z
     QDRANT_COLLECTION: z.string().min(1).default('rag_minimal'),
 
     DATABASE_URL: z.string().default('file:./dev.db'),
+    CHAT_LOG_DIR: z.string().min(1).default('./logs'),
 
     USE_WIDGET: strictBool,
     WIDGET_TOKEN: z.string().default(''),

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { ToolSet } from 'ai';
 import { GenerationService } from './ai/generation.service';
+import { ChatLogService } from './chat-log.service';
 import { QdrantService } from './vector/qdrant.service';
 
 const TOP_K = 4;
@@ -25,6 +26,7 @@ export class ChatService {
   constructor(
     private readonly generation: GenerationService,
     private readonly qdrant: QdrantService,
+    private readonly chatLog: ChatLogService,
   ) {}
 
   async handleUserMessage(userText: string, tools: ToolSet = {}): Promise<ChatReply> {
@@ -32,6 +34,7 @@ export class ChatService {
     const relevant = results.filter((r) => r.score >= SCORE_THRESHOLD);
 
     if (relevant.length === 0) {
+      await this.chatLog.write(userText, 'Такой информации не найдено');
       return { answer: 'Такой информации не найдено', sources: [] };
     }
 
@@ -44,6 +47,9 @@ export class ChatService {
       { tools },
     );
     this.logger.log(`Answered using ${relevant.length} chunks (sources: ${sources.join(', ')})`);
+
+    await this.chatLog.write(userText, answer);
+
     return { answer, sources };
   }
 }
