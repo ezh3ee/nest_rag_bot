@@ -1,5 +1,5 @@
-import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
@@ -19,7 +19,7 @@ async function bootstrap(): Promise<void> {
     });
   }
 
-  await app.listen(config.PORT);
+  await app.listen(config.PORT, '0.0.0.0');
   Logger.log(`Application started on port ${config.PORT}`, 'Bootstrap');
 }
 
