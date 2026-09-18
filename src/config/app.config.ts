@@ -12,13 +12,17 @@ const strictBool = z
 
 const appConfigSchema = z
   .object({
+    PORT: z.coerce.number().int().positive().default(3000),
+
     TELEGRAM_BOT_TOKEN: z.string().min(1),
     ADMIN_CHAT_ID: z.coerce.number().int().positive(),
 
     QDRANT_URL: z.string().url().default('http://localhost:6333'),
+    QDRANT_API_KEY: z.string().min(1).default(''),
     QDRANT_COLLECTION: z.string().min(1).default('rag_minimal'),
 
     DATABASE_URL: z.string().default('file:./dev.db'),
+    CHAT_LOG_DIR: z.string().min(1).default('./logs'),
 
     USE_WIDGET: strictBool,
     WIDGET_TOKEN: z.string().default(''),

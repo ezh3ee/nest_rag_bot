@@ -88,6 +88,13 @@ export class IngestService {
       this.logger.log(`Ingested "${fileName}" (${chunks.length} chunks)`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      try {
+        await this.qdrant.deleteByDocument(documentId);
+      } catch (cleanupError) {
+        const cleanupMessage =
+          cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+        this.logger.error(`Vector cleanup failed for "${fileName}": ${cleanupMessage}`);
+      }
       await this.store.update(documentId, { status: 'error', errorMessage: message });
       this.logger.error(`Ingest failed for "${fileName}": ${message}`);
       throw error;

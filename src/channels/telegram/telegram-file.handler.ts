@@ -3,7 +3,11 @@ import type { ConfigType } from '@nestjs/config';
 import type { Bot, Context, Filter } from 'grammy';
 import { z } from 'zod';
 import appConfig from '../../config/app.config';
-import { IngestService, isSupportedFileName } from '../../core/ingest/ingest.service';
+import {
+  IngestService,
+  isSupportedFileName,
+  type IngestResult,
+} from '../../core/ingest/ingest.service';
 import { downloadTelegramFile } from './telegram-files';
 import { isAdmin } from './telegram-guards';
 
@@ -74,6 +78,8 @@ export class FileHandler {
     const status = await ctx.reply(`⏳ Обрабатываю ${fileName}...`);
 
     let currentTry = 0;
+    let lastError = '';
+    let result: IngestResult | null = null;
     while (currentTry < PARSE_FILE_RETRIES) {
       try {
         if (currentTry) {
@@ -86,17 +92,11 @@ export class FileHandler {
 
         const file = await ctx.getFile();
         const buffer = await downloadTelegramFile(this.config.TELEGRAM_BOT_TOKEN, file.file_path);
-        const result = await this.ingest.ingest(fileName, buffer);
-        await ctx.api.editMessageText(
-          ctx.chat.id,
-          status.message_id,
-          `✅ ${fileName}: ${result.document.chunkCount} чанков добавлено.`,
-        );
-
+        result = await this.ingest.ingest(fileName, buffer);
         break;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        if (!isNetworkError(error) || currentTry >= PARSE_FILE_RETRIES) {
+        if (!isNetworkError(error)) {
           await ctx.api.editMessageText(
             ctx.chat.id,
             status.message_id,
@@ -112,8 +112,32 @@ export class FileHandler {
           `Network error on ingest try ${currentTry} for "${fileName}": ${message}. Retrying...`,
         );
 
+        lastError = message;
         currentTry++;
       }
+    }
+
+    if (result) {
+      try {
+        await ctx.api.editMessageText(
+          ctx.chat.id,
+          status.message_id,
+          `✅ ${fileName}: ${result.document.chunkCount} чанков добавлено.`,
+        );
+      } catch (notifyError) {
+        this.logger.warn(`Failed to edit status message for "${fileName}"`, notifyError);
+        await ctx.reply(`✅ ${fileName}: ${result.document.chunkCount} чанков добавлено.`);
+      }
+    } else {
+      await ctx.api.editMessageText(
+        ctx.chat.id,
+        status.message_id,
+        `❌ Ошибка загрузки файла: ${lastError}.`,
+      );
+
+      this.logger.error(
+        `Ingest failed for "${fileName}" after ${PARSE_FILE_RETRIES} attempts: ${lastError}`,
+      );
     }
   }
 }

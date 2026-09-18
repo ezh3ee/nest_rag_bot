@@ -27,7 +27,7 @@ export class QdrantService {
     private readonly llmConf: ConfigType<typeof llmConfig>,
     factory: LLMFactory,
   ) {
-    this.client = new QdrantClient({ url: config.QDRANT_URL });
+    this.client = new QdrantClient({ url: config.QDRANT_URL, apiKey: config.QDRANT_API_KEY });
     this.store = new QdrantVectorStore(factory.createEmbedding(), {
       url: this.config.QDRANT_URL,
       collectionName: this.config.QDRANT_COLLECTION,
