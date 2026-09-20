@@ -9,8 +9,8 @@ export class WidgetService {
     private readonly counter: WidgetCounterService,
   ) {}
 
-  async handleMessage(message: string): Promise<ChatReply> {
-    const result = await this.chat.handleUserMessage(message);
+  async handleMessage(message: string, chatId: string): Promise<ChatReply> {
+    const result = await this.chat.handleUserMessage(message, chatId);
 
     if (result.answer) await this.counter.increment();
 

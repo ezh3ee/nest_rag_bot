@@ -5,4 +5,8 @@ export class WidgetMessageDto {
   @IsNotEmpty()
   @MaxLength(2000)
   message!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  chatId!: string;
 }
