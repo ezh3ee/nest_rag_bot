@@ -1,14 +1,20 @@
 import { AIMessage, BaseMessage, HumanMessage } from '@langchain/core/messages';
 import { RedisChatMessageHistory } from '@langchain/redis';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
 @Injectable()
 export class ChatMemoryService {
   private readonly TTL = 60 * 60 * 1 * 1; // 1 hour
 
+  constructor(
+    @Inject('REDIS_CLIENT')
+    private readonly redis: RedisChatMessageHistory,
+  ) {}
+
   private getHistory(sessionId: string): RedisChatMessageHistory {
     return new RedisChatMessageHistory({
       sessionId,
+      client: this.redis,
       sessionTTL: this.TTL,
     });
   }

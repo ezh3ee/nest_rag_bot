@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
-import { Redis } from 'ioredis';
+import { createClient } from 'redis';
 import appConfig from '../config/app.config';
 
 @Module({
@@ -8,11 +8,18 @@ import appConfig from '../config/app.config';
     {
       provide: 'REDIS_CLIENT',
       inject: [appConfig.KEY],
-      useFactory: (config: ConfigType<typeof appConfig>) => {
-        return new Redis({
-          host: config.REDIS_HOST,
-          port: 6379,
+      useFactory: async (config: ConfigType<typeof appConfig>) => {
+        const client = createClient({
+          socket: {
+            host: config.REDIS_HOST,
+            port: 6379,
+          },
         });
+
+        client.on('error', (err) => console.error('Redis Client Error', err));
+
+        await client.connect();
+        return client;
       },
     },
   ],
