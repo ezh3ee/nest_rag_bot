@@ -1,4 +1,13 @@
 services:
+  redis:
+    image: redis:trixie
+    container_name: redis
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+
   qdrant:
     image: docker.m.daocloud.io/qdrant/qdrant:latest
     container_name: rag_factory_qdrant
@@ -37,6 +46,8 @@ services:
     volumes:
       - app_data:/data
     depends_on:
+      redis:
+        condition: service_started
       qdrant:
         condition: service_started
       migrate:
@@ -45,3 +56,4 @@ services:
 volumes:
   qdrant_data:
   app_data:
+  redis_data:

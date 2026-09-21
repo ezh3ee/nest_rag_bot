@@ -1,5 +1,7 @@
+import { HumanMessage } from '@langchain/core/messages';
 import { Injectable, Logger } from '@nestjs/common';
 import type { ToolSet } from 'ai';
+import { ChatMemoryService } from '../memory/chat-memory.service';
 import { GenerationService } from './ai/generation.service';
 import { ChatLogService } from './chat-log.service';
 import { QdrantService } from './vector/qdrant.service';
@@ -27,11 +29,25 @@ export class ChatService {
     private readonly generation: GenerationService,
     private readonly qdrant: QdrantService,
     private readonly chatLog: ChatLogService,
+    private readonly chatMemory: ChatMemoryService,
   ) {}
 
-  async handleUserMessage(userText: string, tools: ToolSet = {}): Promise<ChatReply> {
+  async handleUserMessage(
+    userText: string,
+    chatId: string,
+    tools: ToolSet = {},
+  ): Promise<ChatReply> {
     const results = await this.qdrant.search(userText, TOP_K);
     const relevant = results.filter((r) => r.score >= SCORE_THRESHOLD);
+
+    const chatHistory = await this.chatMemory.getMessages(chatId);
+
+    let formattedHistory;
+    if (chatHistory.length > 0) {
+      formattedHistory = chatHistory
+        .map((m) => (m instanceof HumanMessage ? `<USER> ${m.text}` : `<AI>: ${m.text}`))
+        .join('\n');
+    }
 
     if (relevant.length === 0) {
       await this.chatLog.write(userText, 'Такой информации не найдено');
@@ -42,10 +58,21 @@ export class ChatService {
     const sources = [...new Set(relevant.map((r) => r.fileName))].filter(Boolean);
 
     const answer = await this.generation.generate(
-      `${SYSTEM_PROMPT}\n\nКонтекст:\n${context}`,
+      `
+      **SYSTEM PROMPT**
+      ${SYSTEM_PROMPT}
+      **CONTEXT**
+      ${context}
+      **CHAT HISTORY**
+      ${formattedHistory}
+      `,
       userText,
       { tools },
     );
+
+    await this.chatMemory.addMessage(chatId, 'user', userText);
+    await this.chatMemory.addMessage(chatId, 'assistant', answer);
+
     this.logger.log(`Answered using ${relevant.length} chunks (sources: ${sources.join(', ')})`);
 
     await this.chatLog.write(userText, answer);

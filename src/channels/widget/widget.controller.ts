@@ -28,7 +28,10 @@ export class WidgetController {
 
   @Post()
   async onChatMessage(@Body() widgetMessageDto: WidgetMessageDto): Promise<WidgetReply> {
-    const res = await this.widgetService.handleMessage(widgetMessageDto.message);
+    const res = await this.widgetService.handleMessage(
+      widgetMessageDto.message,
+      widgetMessageDto.chatId,
+    );
 
     return {
       success: true,

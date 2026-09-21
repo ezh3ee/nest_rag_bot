@@ -26,12 +26,14 @@ export class ChatHandler {
 
   private async onTextMessage(ctx: TextMessageContext): Promise<void> {
     const text = ctx.message.text;
+    const chatId = ctx.chat.id;
+
     if (text.startsWith('/')) {
       await ctx.reply('Неизвестная команда. Доступные команды — в меню (кнопка слева).');
       return;
     }
     try {
-      const reply = await this.chat.handleUserMessage(text);
+      const reply = await this.chat.handleUserMessage(text, String(chatId));
       await ctx.reply(reply.answer.slice(0, MAX_TG_MESSAGE));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
