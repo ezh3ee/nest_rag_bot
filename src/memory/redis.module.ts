@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
-import { createClient } from 'redis';
+import { createClient, type RedisClientType } from 'redis';
 import appConfig from '../config/app.config';
 
 @Module({
@@ -8,7 +8,7 @@ import appConfig from '../config/app.config';
     {
       provide: 'REDIS_CLIENT',
       inject: [appConfig.KEY],
-      useFactory: async (config: ConfigType<typeof appConfig>) => {
+      useFactory: async (config: ConfigType<typeof appConfig>): Promise<RedisClientType> => {
         const client = createClient({
           socket: {
             host: config.REDIS_HOST,

@@ -1,6 +1,7 @@
 import { AIMessage, BaseMessage, HumanMessage } from '@langchain/core/messages';
 import { RedisChatMessageHistory } from '@langchain/redis';
 import { Inject, Injectable } from '@nestjs/common';
+import { type RedisClientType } from 'redis';
 
 @Injectable()
 export class ChatMemoryService {
@@ -8,7 +9,7 @@ export class ChatMemoryService {
 
   constructor(
     @Inject('REDIS_CLIENT')
-    private readonly redis: RedisChatMessageHistory,
+    private readonly redis: RedisClientType,
   ) {}
 
   private getHistory(sessionId: string): RedisChatMessageHistory {
