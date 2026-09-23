@@ -28,6 +28,8 @@ export class ChatHandler {
     const text = ctx.message.text;
     const chatId = ctx.chat.id;
 
+    await ctx.replyWithChatAction('typing');
+
     if (text.startsWith('/')) {
       await ctx.reply('Неизвестная команда. Доступные команды — в меню (кнопка слева).');
       return;

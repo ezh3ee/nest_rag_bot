@@ -1,6 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModelV4 } from '@ai-sdk/provider';
-import { generateText } from 'ai';
+import { generateText, stepCountIs } from 'ai';
 import type { OllamaConfig, OpenAILikeConfig } from '../../../../config/llm.schema';
 import type { GenerationOptions } from '../../interfaces/generation-provider.interface';
 import { BaseGenerationProvider } from '../../interfaces/generation-provider.interface';
@@ -28,6 +28,7 @@ export class OpenAICompatibleGenerationProvider extends BaseGenerationProvider {
       system,
       prompt: message,
       tools: options?.tools,
+      stopWhen: stepCountIs(5),
     });
     return text;
   }

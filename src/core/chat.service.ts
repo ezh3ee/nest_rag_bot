@@ -1,8 +1,10 @@
 import { HumanMessage } from '@langchain/core/messages';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ToolSet } from 'ai';
 import { ChatMemoryService } from '../memory/chat-memory.service';
 import { GenerationService } from './ai/generation.service';
+import { LEAD_NOTIFIER, LeadNotifier } from './ai/interfaces/notifier.interface';
+import { createApplicationTool } from './ai/tools/create-application.tool';
 import { ChatLogService } from './chat-log.service';
 import { QdrantService } from './vector/qdrant.service';
 
@@ -30,12 +32,16 @@ export class ChatService {
     private readonly qdrant: QdrantService,
     private readonly chatLog: ChatLogService,
     private readonly chatMemory: ChatMemoryService,
+    @Inject(LEAD_NOTIFIER)
+    private readonly lead: LeadNotifier,
   ) {}
 
   async handleUserMessage(
     userText: string,
     chatId: string,
-    tools: ToolSet = {},
+    tools: ToolSet = {
+      createApplicationTool: createApplicationTool(this.lead),
+    },
   ): Promise<ChatReply> {
     const results = await this.qdrant.search(userText, TOP_K);
     const relevant = results.filter((r) => r.score >= SCORE_THRESHOLD);
