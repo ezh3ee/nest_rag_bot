@@ -33,8 +33,8 @@ export const notifyToolSchema = z.object({
   comment: z.string().optional().describe('Комментарий'),
 });
 
-export abstract class LeadNotifier {
-  abstract notify(lead: INotifier): Promise<void>;
+export interface LeadNotifier {
+  notify(lead: INotifier): Promise<void>;
 }
 
 export const LEAD_NOTIFIER = Symbol('LEAD_NOTIFIER');

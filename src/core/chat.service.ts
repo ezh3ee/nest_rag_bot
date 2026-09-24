@@ -82,7 +82,6 @@ export class ChatService {
     this.logger.log(`Answered using ${relevant.length} chunks (sources: ${sources.join(', ')})`);
 
     await this.chatLog.write(userText, answer);
-
     return { answer, sources };
   }
 }
