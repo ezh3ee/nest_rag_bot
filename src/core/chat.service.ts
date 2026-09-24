@@ -48,7 +48,7 @@ export class ChatService {
 
     const chatHistory = await this.chatMemory.getMessages(chatId);
 
-    let formattedHistory;
+    let formattedHistory = '';
     if (chatHistory.length > 0) {
       formattedHistory = chatHistory
         .map((m) => (m instanceof HumanMessage ? `<USER> ${m.text}` : `<AI>: ${m.text}`))

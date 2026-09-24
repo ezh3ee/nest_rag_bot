@@ -14,22 +14,16 @@ const phoneSchema = z
   .refine((digits) => digits.length >= 10 && digits.length <= 12, {
     message: 'В номере должно быть 10-12 сомволов. Телефон указан неверно',
   })
-  .transform((digits) =>
-    digits.length === 11 && digits.startsWith('8') ? `+7${digits.slice(1)}` : `+${digits}`,
-  );
+  .transform((digits) => {
+    if (digits.length === 10) return `+7${digits}`;
+    if (digits.length === 11 && digits.startsWith('8')) return `+7${digits.slice(1)}`;
+    return `+${digits}`;
+  });
 
 export const notifyToolSchema = z.object({
   name: z.string().describe('Имя ребёнка').min(2),
   phone: phoneSchema,
-  age: z
-    .number()
-    .int()
-    .min(4)
-    .max(18)
-    .positive()
-    .optional()
-    .transform((val) => val && Math.round(val))
-    .describe('Возраст ребёнка'),
+  age: z.number().int().min(4).max(18).positive().optional().describe('Возраст ребёнка'),
   comment: z.string().optional().describe('Комментарий'),
 });
 

@@ -28,7 +28,7 @@ export class OpenAICompatibleGenerationProvider extends BaseGenerationProvider {
       system,
       prompt: message,
       tools: options?.tools,
-      stopWhen: stepCountIs(3),
+      stopWhen: stepCountIs(5),
     });
     return text;
   }

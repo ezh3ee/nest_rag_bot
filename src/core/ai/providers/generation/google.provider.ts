@@ -23,7 +23,7 @@ export class GoogleGenerationProvider extends BaseGenerationProvider {
       system,
       prompt: message,
       tools: options?.tools,
-      stopWhen: stepCountIs(3),
+      stopWhen: stepCountIs(5),
     });
     return text;
   }

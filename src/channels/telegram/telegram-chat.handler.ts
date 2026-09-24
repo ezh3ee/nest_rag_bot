@@ -28,6 +28,10 @@ export class ChatHandler {
     const text = ctx.message.text;
     const chatId = ctx.chat.id;
 
+    // Typing status instantly
+    await ctx.replyWithChatAction('typing');
+
+    // Typing status for long answers
     const interval = setInterval(() => {
       ctx.replyWithChatAction('typing').catch(() => {
         this.logger.error('Failed to send typing action');
