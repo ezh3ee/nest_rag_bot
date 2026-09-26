@@ -5,7 +5,7 @@ import { type RedisClientType } from 'redis';
 
 @Injectable()
 export class ChatMemoryService {
-  private readonly TTL = 60 * 60 * 1 * 1; // 1 hour
+  private readonly TTL = 60 * 60 * 15; // 15 minutes
 
   constructor(
     @Inject('REDIS_CLIENT')

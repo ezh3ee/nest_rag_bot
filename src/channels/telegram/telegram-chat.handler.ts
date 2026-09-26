@@ -28,6 +28,17 @@ export class ChatHandler {
     const text = ctx.message.text;
     const chatId = ctx.chat.id;
 
+    // Typing status instantly
+    await ctx.replyWithChatAction('typing');
+
+    // Typing status for long answers
+    const interval = setInterval(() => {
+      ctx.replyWithChatAction('typing').catch(() => {
+        this.logger.error('Failed to send typing action');
+        clearInterval(interval);
+      });
+    }, 4000);
+
     if (text.startsWith('/')) {
       await ctx.reply('Неизвестная команда. Доступные команды — в меню (кнопка слева).');
       return;
@@ -39,6 +50,8 @@ export class ChatHandler {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Chat error: ${message}`);
       await ctx.reply('Произошла ошибка при обработке вопроса. Попробуй ещё раз.');
+    } finally {
+      clearInterval(interval);
     }
   }
 }
