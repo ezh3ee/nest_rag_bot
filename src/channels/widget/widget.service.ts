@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ChatReply, ChatService } from '../../core/chat.service';
+import { type ChatReply, ChatService } from '../../core/chat.service';
 import { WidgetCounterService } from './widget-counter.service';
 
 @Injectable()
