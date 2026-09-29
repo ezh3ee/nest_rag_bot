@@ -18,5 +18,7 @@ module.exports = {
   },
   testEnvironment: 'node',
   setupFilesAfterEnv: ['<rootDir>/../jest.setup.js'],
+  // покрытие кладём в корень репозитория (он уже в .gitignore), а не в src
+  coverageDirectory: '<rootDir>/../coverage',
   clearMocks: true,
 };

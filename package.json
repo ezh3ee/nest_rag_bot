@@ -19,7 +19,7 @@
     "test:types": "tsc -p tsconfig.spec.json --noEmit",
     "start:prod": "node dist/main.js",
     "amvera:start": "DATABASE_URL=${DATABASE_URL:-file:/data/prod.db} npx prisma migrate deploy && DATABASE_URL=${DATABASE_URL:-file:/data/prod.db} node dist/main.js",
-    "postinstall": "prisma generate"
+    "postinstall": "cross-env DATABASE_URL=file:/tmp/prisma-generate.db prisma generate"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.60",
@@ -60,6 +60,7 @@
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.4.0",
+    "cross-env": "^10.1.0",
     "eslint": "^10.9.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",

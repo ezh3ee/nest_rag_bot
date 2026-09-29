@@ -6,9 +6,6 @@ WORKDIR /app
 
 # ---------- deps: full install (incl. devDeps) + native build toolchain ----------
 FROM base AS deps
-# Prisma CLI читает DATABASE_URL из prisma.config.ts ещё при `generate`;
-# в образе нет .env, поэтому объявляем окружение здесь, а не в npm-скрипте.
-ENV DATABASE_URL="file:/tmp/prisma-generate.db"
 RUN apt-get update \
  && apt-get install -y --no-install-recommends python3 make g++ ca-certificates \
  && rm -rf /var/lib/apt/lists/*
