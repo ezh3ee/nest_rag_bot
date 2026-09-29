@@ -13,13 +13,13 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "lint": "eslint \"src/**/*.ts\" --fix",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest --forceExit",
-    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
-    "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage --forceExit",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:cov": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --forceExit",
     "test:types": "tsc -p tsconfig.spec.json --noEmit",
     "start:prod": "node dist/main.js",
     "amvera:start": "DATABASE_URL=${DATABASE_URL:-file:/data/prod.db} npx prisma migrate deploy && DATABASE_URL=${DATABASE_URL:-file:/data/prod.db} node dist/main.js",
-    "postinstall": "DATABASE_URL=${DATABASE_URL:-file:/tmp/prisma-generate.db} prisma generate"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.60",
