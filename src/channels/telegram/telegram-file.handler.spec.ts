@@ -19,14 +19,15 @@ const networkError = () => new TypeError('fetch failed', { cause: { code: 'ECONN
 
 const buildHandler = () => {
   const ingest = jest.fn();
-  // Полный фейк сервиса: так типы сходятся без кастов
-  const ingestService: IngestService = {
+  // У IngestService приватные поля, поэтому литерал структурно типу не соответствует:
+  // закрываем приведением, как и в остальных спеках (там сервисы тоже подменяются целиком)
+  const ingestService = {
     ingest,
     deleteDocument: jest.fn(),
     deleteAll: jest.fn(),
     getDocumentsPage: jest.fn(),
     getDocument: jest.fn(),
-  };
+  } as unknown as IngestService;
   const handler = new FileHandler(
     ingestService,
     appConfigFake({ TELEGRAM_BOT_TOKEN: 'token', ADMIN_CHAT_ID }),

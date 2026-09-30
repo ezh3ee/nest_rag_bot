@@ -3,7 +3,7 @@ import type { Chunk } from './chunker.service';
 import type { DocumentStore, StoredDocument } from './document-store.interface';
 import { IngestService, isSupportedFileName } from './ingest.service';
 import type { DocxParser } from './parsers/docx.parser';
-import type { ExcelParser } from './parsers/excel.parser';
+import { ExcelParser } from './parsers/excel.parser';
 import type { PdfParser } from './parsers/pdf.parser';
 import type { TextParser } from './parsers/text.parser';
 import { QdrantService } from '../vector/qdrant.service';
@@ -56,7 +56,10 @@ const buildService = (options: Options = {}) => {
   const pdfParser: PdfParser = { parse };
   const docxParser: DocxParser = { parse };
   const textParser: TextParser = { parse };
-  const excelParser: ExcelParser = { parse };
+  // У ExcelParser есть приватный extract — объект-литерал такому типу не подходит.
+  // Поэтому берём настоящий парсер и подменяем ему метод.
+  const excelParser = new ExcelParser();
+  jest.spyOn(excelParser, 'parse').mockImplementation(parse);
 
   const service = new IngestService(
     { chunk } as unknown as ChunkerService,

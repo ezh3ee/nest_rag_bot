@@ -7,23 +7,21 @@ const CONFIG = {
   ADMIN_CHAT_ID: 110159942,
 } as unknown as AppConfig;
 
-type FetchResponse = { ok: boolean; status: number; text: () => Promise<string> };
-type FetchArgs = [url: string, init: { method: string; body: string; headers: unknown }];
-
-const fetchMock = jest.fn<Promise<FetchResponse>, FetchArgs>();
+// Тип мока совпадает с настоящим `fetch`, поэтому подмена global.fetch проходит без кастов
+const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 const originalFetch = global.fetch;
 
 const buildService = (): TgLeadNotifierService => new TgLeadNotifierService(CONFIG);
 
 const sentBody = (): string => {
-  const call = fetchMock.mock.calls[0];
-  return call[1].body;
+  const body = fetchMock.mock.calls[0][1]?.body;
+  return typeof body === 'string' ? body : '';
 };
 
 describe('TgLeadNotifierService', () => {
   beforeEach(() => {
     fetchMock.mockReset();
-    fetchMock.mockResolvedValue({ ok: true, status: 200, text: () => Promise.resolve('') });
+    fetchMock.mockResolvedValue(new Response('', { status: 200 }));
     global.fetch = fetchMock;
   });
 
@@ -37,7 +35,7 @@ describe('TgLeadNotifierService', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('https://api.telegram.org/bot123456:BOT-TOKEN/sendMessage');
-    expect(init.method).toBe('POST');
+    expect(init?.method).toBe('POST');
     expect(sentBody()).toContain('"chat_id":110159942');
   });
 
@@ -70,11 +68,7 @@ describe('TgLeadNotifierService', () => {
   });
 
   it('throws when Telegram answers with an error status', async () => {
-    fetchMock.mockResolvedValue({
-      ok: false,
-      status: 400,
-      text: () => Promise.resolve('Bad Request: chat not found'),
-    });
+    fetchMock.mockResolvedValue(new Response('Bad Request: chat not found', { status: 400 }));
 
     await expect(buildService().notify({ name: 'Иван', phone: '+79251234567' })).rejects.toThrow(
       /Telegram API error 400/,

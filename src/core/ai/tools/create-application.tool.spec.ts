@@ -2,7 +2,7 @@ import type { INotifier, LeadNotifier } from '../interfaces/notifier.interface';
 import { createApplicationTool } from './create-application.tool';
 
 describe('createApplicationTool', () => {
-  const notify = jest.fn<(lead: INotifier) => Promise<void>>().mockResolvedValue(undefined);
+  const notify = jest.fn<Promise<void>, [lead: INotifier]>().mockResolvedValue(undefined);
   const notifier: LeadNotifier = { notify };
 
   beforeEach(() => {

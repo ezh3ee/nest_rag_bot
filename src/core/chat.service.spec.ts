@@ -27,17 +27,19 @@ type BuildOptions = {
 
 const buildService = (options: BuildOptions = {}) => {
   const search = jest
-    .fn<(query: string, limit: number) => Promise<SearchHit[]>>()
+    .fn<Promise<SearchHit[]>, [query: string, limit: number]>()
     .mockResolvedValue(options.hits ?? []);
-  const generate = jest.fn<GenerateFn>().mockResolvedValue(options.answer ?? 'ответ модели');
+  const generate = jest
+    .fn<Promise<string>, Parameters<GenerateFn>>()
+    .mockResolvedValue(options.answer ?? 'ответ модели');
   const write = jest
-    .fn<(question: string, answer: string) => Promise<void>>()
+    .fn<Promise<void>, [question: string, answer: string]>()
     .mockResolvedValue(undefined);
   const getMessages = jest
-    .fn<(chatId: string) => Promise<unknown[]>>()
+    .fn<Promise<unknown[]>, [chatId: string]>()
     .mockResolvedValue(options.history ?? []);
   const addMessage = jest
-    .fn<(chatId: string, role: string, text: string) => Promise<void>>()
+    .fn<Promise<void>, [chatId: string, role: string, text: string]>()
     .mockResolvedValue(undefined);
 
   const leadNotifier: LeadNotifier = { notify: jest.fn() };
@@ -53,9 +55,11 @@ const buildService = (options: BuildOptions = {}) => {
   return { service, search, generate, write, getMessages, addMessage };
 };
 
-const systemPromptOf = (generate: jest.Mock<GenerateFn>): string =>
-  String(generate.mock.calls[0][0]);
-const userPromptOf = (generate: jest.Mock<GenerateFn>): string => String(generate.mock.calls[0][1]);
+// jest.Mock<возврат, аргументы>: так же, как у самого generate
+type GenerateMock = jest.Mock<Promise<string>, Parameters<GenerateFn>>;
+
+const systemPromptOf = (generate: GenerateMock): string => String(generate.mock.calls[0][0]);
+const userPromptOf = (generate: GenerateMock): string => String(generate.mock.calls[0][1]);
 
 describe('ChatService — отсутствие релевантного контекста', () => {
   it('отвечает «не найдено», не доходя до модели', async () => {
