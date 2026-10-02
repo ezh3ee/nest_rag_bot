@@ -3,7 +3,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ToolSet } from 'ai';
 import { ChatMemoryService } from '../memory/chat-memory.service';
 import { GenerationService } from './ai/generation.service';
-import { LEAD_NOTIFIER, LeadNotifier } from './ai/interfaces/notifier.interface';
+import { LEAD_NOTIFIER, type LeadNotifier } from './ai/interfaces/notifier.interface';
 import { createApplicationTool } from './ai/tools/create-application.tool';
 import { ChatLogService } from './chat-log.service';
 import { QdrantService } from './vector/qdrant.service';

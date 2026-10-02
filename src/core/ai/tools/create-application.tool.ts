@@ -1,5 +1,5 @@
 import { tool } from 'ai';
-import { LeadNotifier, notifyToolSchema } from '../interfaces/notifier.interface';
+import { type LeadNotifier, notifyToolSchema } from '../interfaces/notifier.interface';
 
 export const createApplicationTool = (lead: LeadNotifier) =>
   tool({

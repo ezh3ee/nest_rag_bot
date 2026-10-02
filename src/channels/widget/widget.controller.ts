@@ -7,7 +7,7 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { ChatReply } from '../../core/chat.service';
+import type { ChatReply } from '../../core/chat.service';
 import { WidgetDailyLimitGuard } from './widget-daily-limit.guard';
 import { WidgetExceptionFilter } from './widget-exception.filter';
 import { WidgetTokenGuard } from './widget-token.guard';

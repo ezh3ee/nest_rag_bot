@@ -1,6 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { DocumentStatus, DocumentStore, StoredDocument } from './document-store.interface';
+import {
+  DocumentStatus,
+  type DocumentStore,
+  type StoredDocument,
+} from './document-store.interface';
 
 const documentStatuses = Object.values(DocumentStatus);
 

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import appConfig, { AppConfig } from '../../config/app.config';
-import { INotifier, LeadNotifier } from '../ai/interfaces/notifier.interface';
+import appConfig, { type AppConfig } from '../../config/app.config';
+import type { INotifier, LeadNotifier } from '../ai/interfaces/notifier.interface';
 
 @Injectable()
 export class TgLeadNotifierService implements LeadNotifier {
